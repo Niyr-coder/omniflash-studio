@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OmniFlash Studio</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" id="favicon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="booting">
+  <div class="glow" aria-hidden="true"></div>
+
+  <!-- Barra superior -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="/favicon.svg" alt="" width="34" height="34" />
+      <div>
+        <strong>OmniFlash Studio</strong>
+        <span>Gemini Omni Flash · vía Kie</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="live-dot" id="liveDot" data-tip="Conectado: todo se actualiza solo, sin recargar la página."></span>
+      <button class="pill credits" id="creditsBtn" data-tip="Créditos que te quedan en Kie. Haz clic para actualizar.">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.4-1-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.6M12 6.5V8m0 8v1.5"/></svg>
+        <span id="creditsText"><span class="skeleton" style="width:72px"></span></span>
+      </button>
+      <button class="icon-btn" id="folderBtn" data-tip="Abrir la carpeta donde se guardan tus videos">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" data-tip="Tu cuenta de Kie">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Panel para crear -->
+    <section class="composer card" aria-label="Crear video">
+      <div class="modes" role="tablist" id="modes">
+        <button role="tab" data-mode="text" data-tip="Solo escribes lo que quieres ver">
+          <svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+          <span>Texto</span>
+        </button>
+        <button role="tab" data-mode="images" data-tip="Usa tus fotos para que salgan en el video (una persona, un producto, un lugar)">
+          <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>
+          <span>Imágenes</span>
+        </button>
+        <button role="tab" data-mode="frames" data-tip="Tú eliges la imagen con la que empieza (y si quieres, con la que termina)">
+          <svg class="i" viewBox="0 0 24 24"><rect x="2.5" y="6" width="8" height="12" rx="2"/><rect x="13.5" y="6" width="8" height="12" rx="2"/><path d="M10.5 12h3"/></svg>
+          <span>Inicio y fin</span>
+        </button>
+        <button role="tab" data-mode="video" data-tip="Transforma o continúa un video corto que ya tienes">
+          <svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg>
+          <span>Video</span>
+        </button>
+        <span class="mode-indicator" id="modeIndicator" aria-hidden="true"></span>
+      </div>
+      <p class="mode-help" id="modeHelp"></p>
+
+      <!-- Archivos según el modo -->
+      <div class="uploads-wrap" id="uploadsWrap"><div id="uploads"></div></div>
+
+      <!-- Descripción -->
+      <div class="field">
+        <div class="field-head">
+          <label for="prompt">¿Qué quieres ver?</label>
+          <button class="link-btn" id="ideaBtn" type="button" data-tip="Escribe un ejemplo por ti. Haz clic otra vez para ver otro.">
+            <svg class="i sm" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></svg>
+            Dame una idea
+          </button>
+        </div>
+        <div class="prompt-box">
+          <textarea id="prompt" rows="4" maxlength="20000" placeholder="Ej.: Un zorro de papel corre por un bosque de otoño, cámara lenta, luz dorada del atardecer, estilo cine."></textarea>
+          <div class="prompt-foot">
+            <div class="chips" id="styleChips"></div>
+            <span class="count" id="charCount" data-tip="Letras escritas">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ajustes -->
+      <div class="settings">
+        <div class="field">
+          <label>Formato <button type="button" class="info" data-tip="Horizontal es para YouTube y pantallas. Vertical es para TikTok, Reels y Shorts.">?</button></label>
+          <div class="seg" id="ratioSeg">
+            <button data-value="16:9"><span class="ratio-ico wide"></span>Horizontal</button>
+            <button data-value="9:16"><span class="ratio-ico tall"></span>Vertical</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Duración <button type="button" class="info" id="durationInfo" data-tip="Cuántos segundos dura el video. Más largo cuesta más.">?</button> <span class="hint" id="durationHint"></span></label>
+          <div class="seg" id="durationSeg">
+            <button data-value="4">4 s</button>
+            <button data-value="6">6 s</button>
+            <button data-value="8">8 s</button>
+            <button data-value="10">10 s</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Calidad <button type="button" class="info" data-tip="Usa Borrador para probar ideas rápido. Cuando te guste, créalo en 1080p o 4K.">?</button></label>
+          <div class="seg" id="resSeg">
+            <button data-value="360p" data-tip="Rápido para probar. Cuesta lo mismo que 720p.">360p<small>Borrador</small></button>
+            <button data-value="720p" data-tip="Buena calidad para redes sociales">720p<small>HD</small></button>
+            <button data-value="1080p" data-tip="Nítido en pantallas grandes. Mismo precio que 720p.">1080p<small>Full HD</small></button>
+            <button data-value="4k" data-tip="La máxima calidad. Cuesta más y tarda más.">4K<small>Máxima</small></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Versiones <button type="button" class="info" data-tip="Crea varias versiones de la misma idea a la vez y quédate con la que más te guste. Cada una se cobra aparte.">?</button></label>
+          <div class="seg" id="countSeg">
+            <button data-value="1">1</button>
+            <button data-value="2">2</button>
+            <button data-value="3">3</button>
+            <button data-value="4">4</button>
+          </div>
+        </div>
+        <details class="advanced" id="advanced">
+          <summary>Opciones avanzadas</summary>
+          <div class="advanced-body">
+            <div class="field">
+              <label for="seed">Semilla <button type="button" class="info" data-tip="Es como el número de una receta: con la misma descripción y el mismo número, el resultado sale parecido. Déjalo vacío para que cada vez sea distinto.">?</button></label>
+              <div class="seed-row">
+                <input id="seed" type="number" min="0" max="2147483647" placeholder="Al azar" />
+                <button class="ghost-btn" id="diceBtn" type="button" data-tip="Elegir un número al azar">
+                  <svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="generate-wrap">
+        <button class="generate" id="generateBtn">
+          <span class="g-label">
+            <svg class="i" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
+            <span id="generateText">Crear video</span>
+          </span>
+          <span class="g-cost" id="costText" data-tip="Lo que te cobrará Kie. 1 crédito = $0.005"></span>
+        </button>
+        <p class="shortcut" id="shortcut">Puedes seguir creando mientras esperas · <kbd>Ctrl</kbd> + <kbd>Enter</kbd></p>
+      </div>
+    </section>
+
+    <!-- Galería -->
+    <section class="gallery" aria-label="Tus videos">
+      <div class="gallery-head">
+        <h2>Tus videos</h2>
+        <div class="filters" id="filters">
+          <button data-filter="all" class="on">Todos <span class="n" id="nAll"></span></button>
+          <button data-filter="pending">En proceso <span class="n" id="nPending"></span></button>
+          <button data-filter="done">Listos <span class="n" id="nDone"></span></button>
+        </div>
+      </div>
+
+      <!-- Cola -->
+      <div class="queuebar" id="queuebar" hidden>
+        <div class="q-status">
+          <span class="q-orb" id="qOrb"></span>
+          <div>
+            <strong id="qTitle"></strong>
+            <span id="qSub"></span>
+          </div>
+        </div>
+        <div class="q-actions">
+          <div class="stepper" data-tip="Cuántos videos se crean al mismo tiempo. Los demás esperan su turno en la cola.">
+            <span>A la vez</span>
+            <button id="qMinus" aria-label="Menos">−</button>
+            <b id="qMax">2</b>
+            <button id="qPlus" aria-label="Más">+</button>
+          </div>
+          <button class="q-btn" id="qPause"></button>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+      <p class="muted filter-empty" id="filterEmpty" hidden>No hay videos en esta vista.</p>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-art" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <h3>Tu primer video está a un clic</h3>
+        <p>Describe una escena a la izquierda y presiona <b>Crear video</b>. Puedes pedir varios seguidos: se forman en una cola y aquí verás cómo avanza cada uno.</p>
+      </div>
+      <div class="grid" id="skeletonGrid" aria-hidden="true">
+        <div class="vcard ghost"><div class="vmedia"></div><div class="vbody"><span class="skeleton"></span><span class="skeleton" style="width:60%"></span></div></div>
+        <div class="vcard ghost"><div class="vmedia"></div><div class="vbody"><span class="skeleton"></span><span class="skeleton" style="width:60%"></span></div></div>
+        <div class="vcard ghost"><div class="vmedia"></div><div class="vbody"><span class="skeleton"></span><span class="skeleton" style="width:60%"></span></div></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bienvenida / llave -->
+  <div class="modal" id="keyModal" hidden>
+    <div class="modal-card welcome">
+      <img src="/favicon.svg" alt="" width="52" height="52" />
+      <h2 id="keyTitle">Bienvenido a OmniFlash Studio</h2>
+      <p class="muted" id="keySubtitle">Conecta tu cuenta de Kie una sola vez y empieza a crear videos.</p>
+      <ol class="steps">
+        <li><span>1</span><div>Entra a <a href="https://kie.ai/api-key" target="_blank" rel="noopener">kie.ai/api-key</a> (crea tu cuenta si no tienes; te regalan créditos para probar).</div></li>
+        <li><span>2</span><div>Copia tu <b>API Key</b>.</div></li>
+        <li><span>3</span><div>Pégala aquí abajo. Se guarda solo en tu computadora.</div></li>
+      </ol>
+      <form id="keyForm">
+        <input id="keyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Pega tu llave de Kie" />
+        <button type="submit" class="primary" id="keySubmit">Conectar</button>
+      </form>
+      <p class="form-error" id="keyError" hidden></p>
+      <p class="key-current" id="keyCurrent" hidden></p>
+      <button class="link-btn close-key" id="keyClose" hidden>Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Visor -->
+  <div class="modal" id="viewer" hidden>
+    <div class="viewer-card">
+      <button class="icon-btn viewer-close" id="viewerClose" data-tip="Cerrar (Esc)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="viewer-media" id="viewerMedia"></div>
+      <aside class="viewer-info" id="viewerInfo"></aside>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

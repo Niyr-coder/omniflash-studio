@@ -1,0 +1,6 @@
+# Tu llave de Kie y tus datos locales: nunca se suben
+.env
+data/
+videos/
+node_modules/
+*.log
