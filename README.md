@@ -1,6 +1,6 @@
 # ⚡ OmniFlash Studio
 
-Un estudio sencillo y bonito para crear videos con **Gemini Omni Flash** (modelo `google/gemini-omni-flash-1-1`) usando la API de **[Kie.ai](https://kie.ai)**.
+Un estudio sencillo y bonito para crear videos con **Gemini Omni Flash** (modelos 1.2 y 1.1) usando la API de **[Kie.ai](https://kie.ai)**.
 
 Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video** y en 1 a 3 minutos lo tienes listo, guardado en la carpeta `videos/`.
 
@@ -15,6 +15,14 @@ Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video
    - Entra a [kie.ai/api-key](https://kie.ai/api-key) y copia tu **API Key**.
    - Pégala en el estudio y presiona **Conectar**.
    - Se guarda en el archivo `.env` de esta carpeta, solo en tu computadora.
+4. **Revisa los permisos de tu llave** en kie.ai → API Key. Si tu llave está limitada a ciertos modelos, activa estos (o permite todos):
+   - Gemini Omni Flash 1.2 y 1.1 (crear videos)
+   - Gemini Omni Flash 1.2 Extend (continuar videos)
+   - Video Upscale (mejorar calidad)
+   - Gemini Omni Character y Audio (personajes y voces)
+   - Gemini 3.8 Flash (para «Mejorar con IA»)
+
+   Si falta un permiso, el estudio te dice exactamente cuál activar.
 
 Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `Ctrl + C` o cierra la ventana).
 
@@ -25,34 +33,67 @@ Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `C
 | Modo | Para qué sirve |
 |---|---|
 | **Texto** | Describes la escena y la IA la crea desde cero. |
-| **Imágenes** | Subes de 1 a 7 fotos (un personaje, un producto, un lugar) y el video las usa como referencia. |
-| **Inicio y fin** | Eliges la imagen con la que empieza el video y, si quieres, con la que termina. La IA crea lo que pasa en medio. |
-| **Video** | Subes un video corto (máx. 30 s) y eliges un tramo de hasta 10 s para transformarlo o continuarlo. Puedes añadir hasta 5 imágenes. |
+| **Imágenes** | Subes fotos (un personaje, un producto, un lugar) y el video las usa como referencia. |
+| **Inicio y fin** | Eliges la imagen con la que empieza el video y, si quieres, con la que termina. |
+| **Video** | Subes un video corto y describes cómo transformarlo. |
 
-**Ajustes:**
-- **Formato:** horizontal (16:9) o vertical (9:16, ideal para TikTok, Reels y Shorts).
-- **Duración:** 4, 6, 8 o 10 segundos (en modo Video la elige la IA).
-- **Calidad:** 360p (borrador rápido), 720p, 1080p o 4K.
-- **Semilla** (opciones avanzadas): si repites el mismo número con la misma descripción, sale un resultado parecido.
+**Dos modelos** (arriba del panel):
 
-**Cola de videos:**
-- Pide todos los videos que quieras seguidos: se forman en una **cola** y se crean solos, en orden.
-- **Versiones (1 a 4):** crea varias versiones de la misma idea de una vez.
-- **A la vez:** cuántos videos se crean al mismo tiempo (los demás esperan su turno).
-- **Pausar / Reanudar:** detiene los envíos; los que ya se están creando terminan igual.
-- Quitar un video de la cola no cuesta nada. Si te quedas sin créditos, la cola se pausa sola.
-- Cada video muestra en qué paso va (en cola, enviando, generando, guardando), cuánto lleva y cuánto falta aproximadamente. El cálculo aprende de lo que tardaron tus videos anteriores.
-- Todo se actualiza solo, sin recargar, incluso si tienes el estudio abierto en dos pestañas. El punto verde arriba indica que está conectado.
+| | Omni 1.2 (recomendado) | Omni 1.1 |
+|---|---|---|
+| Duración | 4 a 15 s | 4, 6, 8 o 10 s |
+| Precio | Por segundo (borradores muy baratos) | Precio fijo por duración |
+| Continuar videos | Sí | No |
+| Video de entrada | Hasta 15 s, completo | Hasta 30 s, eliges un tramo de 10 s |
+| Personajes a la vez | 2 | 3 |
 
-**Atajos útiles:**
-- `Ctrl + Enter` crea el video.
-- `Ctrl + V` pega una imagen copiada directamente.
-- Arrastra archivos sobre las zonas de subida.
-- **Dame una idea** escribe un ejemplo; los botones de estilo (Cine, Anime, Drone…) añaden detalles a tu descripción.
-- Pasa el mouse sobre cualquier botón o sobre los **?** para ver qué hace, en palabras sencillas.
-- En cada video: el **lápiz** lleva la idea al panel para cambiarla; las **flechas** reintentan uno que falló.
-- En el visor grande, usa **← →** para pasar de un video a otro.
-- Lo que subes y lo que escribes se guarda aunque recargues la página.
+**Ajustes:** formato (horizontal o vertical), duración, calidad (360p borrador, 720p, 1080p, 4K), versiones (1 a 4) y, en opciones avanzadas, la semilla.
+
+---
+
+## Personajes con voz
+
+Crea un personaje una vez (foto de la cara, foto de cuerpo opcional, descripción y una voz) y aparecerá **igual en todos tus videos**. Crearlo es gratis.
+Para usarlo, tócalo en la fila **Personajes** y escribe su nombre en la descripción («Lucía camina por…»).
+Las voces vienen de Kie con nombres de estrellas (Sulafat, Kore, Puck…); al lado de cada una dice su tono. Puedes describir el acento o la forma de hablar.
+
+---
+
+## Hacer más con un video terminado
+
+Abre cualquier video (clic encima) y encontrarás:
+- **Continuar este video** (modelo 1.2, en 360p o 720p): escribes qué pasa después y Kie lo alarga con una escena nueva. El resultado incluye el original. Puedes seguir alargando hasta ~15 s.
+- **Recrear en alta calidad**: vuelve a crear la misma idea en 1080p o 4K, con la misma semilla para que salga muy parecida. Ideal después de probar en borrador.
+- **Mejorar calidad**: agranda *el mismo video exacto* a 1080p, 2K o 4K. Kie no publica este precio; lo verás cuando termine.
+- **Comparar las versiones** (si pediste varias), **favorito ★**, **mover a un proyecto**, descargar y copiar la descripción.
+
+---
+
+## Organizar
+
+- **Proyectos:** agrupa tus videos (por ejemplo, «Miniserie del robot»). Elige en la galería qué proyecto ver; los videos nuevos se guardan en el proyecto elegido abajo, junto al botón Crear.
+- **Favoritos ★** y **buscador** en la galería.
+- **Comparar:** botón «Comparar» → elige de 2 a 4 videos → se reproducen lado a lado, sincronizados. Toca el altavoz de uno para escuchar su sonido.
+- **Recetas:** guarda una descripción con sus ajustes (y personajes) y úsala otra vez con un clic.
+- **Mejorar con IA:** convierte una idea corta en una descripción completa (cámara, luz, ambiente). Cuesta muy poco y se puede deshacer.
+
+---
+
+## Cola, tiempos y gastos
+
+- Pide todos los videos que quieras seguidos: se forman en una **cola** y se crean solos, en orden. Puedes pausarla, reanudarla y elegir cuántos se crean **a la vez**.
+- Cada video muestra en qué paso va, cuánto lleva y cuánto falta (el cálculo aprende de tus videos anteriores).
+- **Tu cuenta** (clic en los créditos): saldo, lo gastado hoy / 7 días / total con gráfica, y un **límite diario**: si un video lo superaría, la cola se pausa sola.
+- Todo se actualiza solo, sin recargar, incluso en varias pestañas o en el celular.
+
+---
+
+## Usar desde el celular
+
+Botón del celular (arriba) → activa **Permitir el acceso desde el celular** → escanea el código QR con la cámara.
+- El celular tiene que estar en el **mismo Wi-Fi** y la computadora encendida con el estudio abierto.
+- La primera vez Windows puede preguntar si permites el acceso a la red: elige **Redes privadas**.
+- Solo entra quien tenga el código. Si lo compartiste por error, usa «Cambiar el código».
 
 ---
 
@@ -60,41 +101,54 @@ Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `C
 
 Kie cobra en créditos (1 crédito = $0.005 USD). El botón **Crear video** te muestra el precio antes de gastar.
 
+**Omni 1.2** — por segundo de video:
+
+| 360p | 720p | 1080p | 4K |
+|---|---|---|---|
+| 4 créditos/s | 9 créditos/s | 10 créditos/s | 22 créditos/s |
+
+Ejemplo: 8 s en 360p = 32 créditos ($0.16). Con video de entrada se cobra según la duración de ese video.
+
+**Omni 1.1** — precio fijo:
+
 | Calidad | 4 s | 6 s | 8 s | 10 s |
 |---|---|---|---|---|
 | 360p / 720p / 1080p | 63 | 84 | 105 | 126 |
 | 4K | 147 | 168 | 189 | 210 |
 | Con video de entrada | 168 (hasta 1080p) · 252 (4K) |||
 
-Precios tomados de [kie.ai/gemini-omni-1-1-flash](https://kie.ai/gemini-omni-1-1-flash) en noviembre de 2026; revisa esa página si cambian (y la tabla `PRICES` en `server.js`).
+Personajes y voces: gratis. Continuar un video y Mejorar calidad: Kie no publica el precio exacto; el estudio muestra un aproximado (continuar) y el costo real al terminar.
+Precios tomados de kie.ai en noviembre de 2026; si cambian, actualiza la tabla `PRICES` en `server.js`.
 
 ---
 
 ## Bueno saber
 
-- **Tus videos se guardan solos** en la carpeta `videos/` (botón de carpeta arriba a la derecha). Kie los borra de sus servidores a los 14 días, pero tu copia queda.
-- **Los archivos que subes** (fotos y videos de referencia) Kie los borra a las 24 horas. Si reutilizas un video más viejo, vuelve a subirlos.
+- **Tus videos se guardan solos** en la carpeta `videos/`. Kie los borra de sus servidores a los 14 días, pero tu copia queda. (Continuar y Mejorar calidad solo funcionan mientras el video siga en Kie.)
+- **Los archivos que subes** Kie los borra a las 24 horas. Si reutilizas un video más viejo, vuelve a subirlos.
 - **Puedes cerrar el navegador** mientras se crea un video: mientras la ventana negra siga abierta, el estudio lo sigue esperando y lo descarga.
-- Si Kie rechaza un video por sus reglas de contenido, cambia la descripción o la imagen e intenta otra vez.
+- La ventana negra muestra los mensajes de error exactos de Kie (líneas `[Kie]`), útiles si algo falla.
 
 ---
 
 ## Para desarrolladores
 
-Sin dependencias: solo Node 18+.
+Sin dependencias de servidor: solo Node 18+. La interfaz incluye `qrcode-generator` (MIT) en `public/vendor/`.
 
 ```
-server.js        Servidor local: guarda la llave, habla con Kie, vigila tareas y descarga videos
+server.js        Servidor local: llave, cola, eventos en vivo (SSE), Kie, descargas, acceso LAN con token
 public/          Interfaz (HTML + CSS + JS sin frameworks)
-data/            Historial local (history.json) — no se sube a git
+data/            Historial, ajustes, personajes y recetas (JSON) — no se sube a git
 videos/          Videos descargados — no se sube a git
 .env             Tu llave KIE_API_KEY y el puerto PORT — no se sube a git
 ```
 
 **API de Kie usada:**
-- `POST https://api.kie.ai/api/v1/jobs/createTask` — crear el video
-- `GET  https://api.kie.ai/api/v1/jobs/recordInfo?taskId=…` — estado y resultado (`resultJson.resultUrls[0]`)
-- `GET  https://api.kie.ai/api/v1/chat/credit` — créditos disponibles
-- `POST https://kieai.redpandaai.co/api/file-stream-upload` — subir imágenes y videos
+- `POST /api/v1/jobs/createTask` — modelos `google/gemini-omni-flash-1-2`, `google/gemini-omni-flash-1-1`, `google/gemini-omni-flash-1-2-extend`, `video/upscale`
+- `GET  /api/v1/jobs/recordInfo?taskId=…` — estado y resultado
+- `POST /api/v1/omni/character/create` y `/api/v1/omni/audio/create` — personajes y voces
+- `POST /gemini-3-8-flash-openai/v1/chat/completions` — «Mejorar con IA»
+- `GET  /api/v1/chat/credit` — créditos
+- `POST https://kieai.redpandaai.co/api/file-stream-upload` — subir archivos
 
-Documentación: [docs.kie.ai/market/google/gemini-omni-flash-1-1](https://docs.kie.ai/market/google/gemini-omni-flash-1-1)
+Documentación: [docs.kie.ai](https://docs.kie.ai)
