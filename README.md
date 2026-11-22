@@ -8,6 +8,7 @@ Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video
 
 ## Cómo empezar (2 minutos)
 
+0. **Descarga el estudio** (si te lo compartieron por GitHub): en la página del repositorio, botón verde **Code → Download ZIP**, y descomprímelo en una carpeta. *(O con git: `git clone` y la dirección del repositorio.)*
 1. **Instala Node.js** (solo la primera vez): descárgalo en [nodejs.org](https://nodejs.org), versión LTS.
 2. **Abre el estudio**: haz doble clic en **`Iniciar.bat`**. Se abre solo en tu navegador.
    *(O desde una terminal: `npm start` y entra a http://localhost:4747)*
@@ -24,7 +25,15 @@ Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video
 
    Si falta un permiso, el estudio te dice exactamente cuál activar.
 
+5. **Opcional, para el editor: instala FFmpeg** (gratis). Sirve para exportar tus episodios. Abre **PowerShell**, pega esto y presiona Enter:
+   ```
+   winget install Gyan.FFmpeg
+   ```
+   Después cierra la ventana negra y abre `Iniciar.bat` otra vez. *(En Mac: `brew install ffmpeg`.)*
+
 Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `Ctrl + C` o cierra la ventana).
+
+Cada persona usa **su propia llave de Kie** y gasta sus propios créditos. Tus videos, proyectos y llave nunca se suben al repositorio.
 
 ---
 
@@ -47,7 +56,28 @@ Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `C
 | Video de entrada | Hasta 15 s, completo | Hasta 30 s, eliges un tramo de 10 s |
 | Personajes a la vez | 2 | 3 |
 
-**Ajustes:** formato (horizontal o vertical), duración, calidad (360p borrador, 720p, 1080p, 4K), versiones (1 a 4) y, en opciones avanzadas, la semilla.
+**Ajustes:** aparecen resumidos en una línea (ej. «Omni 1.2 · Horizontal · 6 s · 720p»); tócala para cambiar formato (horizontal o vertical), duración, calidad (360p borrador, 720p, 1080p, 4K), versiones (1 a 4) y, en opciones avanzadas, la semilla.
+
+---
+
+## La biblia del proyecto (tu «system prompt»)
+
+Arriba del panel eliges el **proyecto** y, al lado, el botón **Biblia**. Ahí defines las reglas que se aplican solas a **cada video** de ese proyecto:
+- **Estilo base:** cómo se ve y se siente todo (colores, luz, cámara, época, ambiente, idioma de los diálogos).
+- **Evitar siempre:** lo que nunca quieres ver (toca las sugerencias: texto en pantalla, marcas de agua…).
+- **Estilo guardado**, **semilla fija** (para que la «textura» se parezca entre escenas) y **personajes fijos** (se eligen solos).
+- **Ajustes del proyecto:** modelo, formato y calidad que se ponen solos al elegir el proyecto.
+
+Debajo de tu descripción aparece **«Así se enviará»** con el texto final exacto.
+Ojo: el modelo de video no tiene un «system prompt» real; el estudio añade estas reglas al final de tu descripción. Funciona bien, pero el modelo puede no cumplirlas al 100 %.
+
+## Estilo: un solo lugar
+
+El botón **Estilo** (dentro de la caja de descripción) abre un solo selector con: el estilo del proyecto, tus estilos guardados, estilos rápidos (Cine, Anime, Documental…) y **toques** que se suman (cámara lenta, drone, hora dorada…). Tus estilos se crean en «Mis estilos». Desde un video terminado, **Guardar su estilo** crea uno con ese video como ejemplo; **Mejorar con IA** convierte unas pocas palabras (o la descripción del video) en un estilo completo.
+
+## Continuidad entre escenas
+
+En un video terminado, **Siguiente escena desde aquí** toma su último cuadro y lo pone como inicio del siguiente video (modo «Inicio y fin»), en el mismo proyecto. Así la historia sigue sin saltos. Funciona con los dos modelos y cualquier calidad. (En ese modo no se pueden elegir personajes, pero ya aparecen en el cuadro.)
 
 ---
 
@@ -69,12 +99,26 @@ Abre cualquier video (clic encima) y encontrarás:
 
 ---
 
+## Editor: une tus escenas en un episodio
+
+Botón **Editor** (arriba de la galería), o **Añadir al editor** desde un video abierto.
+- **Tus clips** (izquierda): los videos listos del proyecto. Toca **+** para añadir uno al final, o **Añadir todos** para ponerlos en el orden en que los creaste.
+- **Línea de tiempo** (abajo): arrastra los clips para cambiar el orden. Toca uno para elegirlo.
+- **Recortar** (derecha): mueve los bordes blancos para quitar segundos al inicio o al final. La pantalla muestra el cuadro exacto mientras arrastras. También puedes moverlo, repetirlo o quitarlo.
+- **Episodio**: formato (horizontal o vertical), **corte directo** o **fundido suave** entre clips, volumen del sonido de los clips y **música de fondo** (se repite si es corta y baja suave al final).
+- **Vista previa al instante** con el botón ▶ (o la barra espaciadora), con tus recortes, fundidos y música.
+- **Exportar episodio** crea un solo MP4 en `videos/` y lo pone en la galería. **No gasta créditos**: lo arma FFmpeg en tu computadora. Si vuelves a exportar, se reemplaza el anterior.
+
+Puedes tener varios episodios (selector de arriba a la izquierda). Todo se guarda solo. Si mezclas clips verticales y horizontales, se ajustan al formato del episodio con bordes negros, sin deformarse.
+
+---
+
 ## Organizar
 
 - **Proyectos:** agrupa tus videos (por ejemplo, «Miniserie del robot»). Elige en la galería qué proyecto ver; los videos nuevos se guardan en el proyecto elegido abajo, junto al botón Crear.
 - **Favoritos ★** y **buscador** en la galería.
 - **Comparar:** botón «Comparar» → elige de 2 a 4 videos → se reproducen lado a lado, sincronizados. Toca el altavoz de uno para escuchar su sonido.
-- **Recetas:** guarda una descripción con sus ajustes (y personajes) y úsala otra vez con un clic.
+- **Plantillas:** guarda la idea completa (descripción, estilo, ajustes y personajes) y úsala otra vez con un clic.
 - **Mejorar con IA:** convierte una idea corta en una descripción completa (cámara, luz, ambiente). Cuesta muy poco y se puede deshacer.
 
 ---
@@ -133,12 +177,12 @@ Precios tomados de kie.ai en noviembre de 2026; si cambian, actualiza la tabla `
 
 ## Para desarrolladores
 
-Sin dependencias de servidor: solo Node 18+. La interfaz incluye `qrcode-generator` (MIT) en `public/vendor/`.
+Sin dependencias de servidor: solo Node 18+. La interfaz incluye `qrcode-generator` (MIT) en `public/vendor/`. El editor usa FFmpeg si está instalado (lo busca en el PATH, en WinGet o en `FFMPEG_PATH` del `.env`).
 
 ```
-server.js        Servidor local: llave, cola, eventos en vivo (SSE), Kie, descargas, acceso LAN con token
-public/          Interfaz (HTML + CSS + JS sin frameworks)
-data/            Historial, ajustes, personajes y recetas (JSON) — no se sube a git
+server.js        Servidor local: llave, cola, eventos en vivo (SSE), Kie, descargas, acceso LAN, exportar episodios (FFmpeg)
+public/          Interfaz (HTML + CSS + JS sin frameworks); editor.js es el editor
+data/            Historial, ajustes, personajes, recetas, episodios y música (JSON + data/music/) — no se sube a git
 videos/          Videos descargados — no se sube a git
 .env             Tu llave KIE_API_KEY y el puerto PORT — no se sube a git
 ```

@@ -44,12 +44,13 @@
   <main class="layout">
     <!-- Panel para crear -->
     <section class="composer card" aria-label="Crear video">
-      <div class="model-row">
-        <span class="model-label">Modelo <button type="button" class="info" data-tip="1.2 es el más nuevo: cobra por segundo (los borradores salen muy baratos), dura hasta 15 s y permite continuar videos. 1.1 permite recortar el video que subes y voces sin personaje.">?</button></span>
-        <div class="seg mini" id="modelSeg">
-          <button data-value="1.2">Omni 1.2 <em>Nuevo</em></button>
-          <button data-value="1.1">Omni 1.1</button>
-        </div>
+      <div class="project-bar">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+        <select id="targetProject" data-tip="El proyecto donde se guardará este video. Cada proyecto puede tener su propia biblia (estilo y reglas)."></select>
+        <button type="button" class="bible-btn" id="bibleBtn" data-tip="La biblia del proyecto: estilo, reglas y personajes que se aplican a todos sus videos">
+          <svg class="i sm" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6"/></svg>
+          <span>Biblia</span><i class="bible-dot"></i>
+        </button>
       </div>
 
       <div class="modes" role="tablist" id="modes">
@@ -96,16 +97,24 @@
               <svg class="i sm" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></svg>
               Idea
             </button>
-            <button class="link-btn" id="recipesBtn" type="button" data-tip="Tus recetas: descripciones y ajustes guardados para usarlos con un clic">
+            <button class="link-btn" id="recipesBtn" type="button" data-tip="Tus plantillas: guarda la idea completa (descripción, estilo, ajustes y personajes) y úsala otra vez con un clic">
               <svg class="i sm" viewBox="0 0 24 24"><path d="M6 3h11a1 1 0 0 1 1 1v17l-6.5-4L5 21V4a1 1 0 0 1 1-1Z"/></svg>
-              Recetas
+              Plantillas
+            </button>
+            <button class="link-btn" id="newCharBtn2" type="button" data-tip="Crea un personaje que salga igual en todos tus videos. Es gratis.">
+              <svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              Personaje
             </button>
           </div>
         </div>
         <div class="prompt-box" id="promptBox">
-          <textarea id="prompt" rows="4" maxlength="20000" placeholder="Ej.: Un zorro de papel corre por un bosque de otoño, cámara lenta, luz dorada del atardecer, estilo cine."></textarea>
+          <textarea id="prompt" rows="4" maxlength="20000" placeholder="Ej.: Un zorro de papel corre por un bosque de otoño, cámara lenta, luz dorada del atardecer."></textarea>
           <div class="prompt-foot">
-            <div class="chips" id="styleChips"></div>
+            <button type="button" class="style-btn" id="styleBtn" aria-haspopup="true" data-tip="Cómo se ve el video: elige un estilo y añade toques (cámara lenta, drone…)">
+              <svg class="i sm" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.6-1.3-.6-2.1 0-.9.7-1.5 1.6-1.5H17a4 4 0 0 0 4-4c0-4.9-4-8.8-9-8.8Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7.5" r="1" fill="currentColor"/></svg>
+              <span id="styleBtnText">Estilo</span>
+              <svg class="i sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
             <div class="prompt-actions">
               <button type="button" class="ai-btn" id="improveBtn" data-tip="La IA convierte tu idea en una descripción más completa (cámara, luz, ambiente). Cuesta muy poco y puedes deshacerlo.">
                 <svg class="i sm" viewBox="0 0 24 24"><path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
@@ -115,10 +124,29 @@
             </div>
           </div>
         </div>
+        <details class="final-preview" id="finalPreview" hidden>
+          <summary><span>Así se enviará</span><span class="fp-tags" id="fpTags"></span></summary>
+          <p class="fp-text" id="finalText"></p>
+          <p class="muted small">El modelo de video no tiene un «system prompt» real: el estudio añade estas reglas al final de tu descripción.</p>
+        </details>
       </div>
 
-      <!-- Ajustes -->
-      <div class="settings">
+      <!-- Ajustes: línea resumen que se abre -->
+      <div class="settings-wrap" id="settingsWrap">
+        <button type="button" class="settings-summary" id="settingsSummary" aria-expanded="false" data-tip="Modelo, formato, duración, calidad y versiones. Clic para cambiarlos.">
+          <svg class="i sm" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+          <span class="ss-text" id="summaryText"></span>
+          <svg class="i sm chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="settings" id="settingsPanel" hidden>
+          <div class="model-row">
+            <span class="model-label">Modelo <button type="button" class="info" data-tip="1.2 es el más nuevo: cobra por segundo (los borradores salen muy baratos), dura hasta 15 s y permite continuar videos. 1.1 permite recortar el video que subes y voces sin personaje.">?</button></span>
+            <div class="seg mini" id="modelSeg">
+              <button data-value="1.2">Omni 1.2 <em>Nuevo</em></button>
+              <button data-value="1.1">Omni 1.1</button>
+            </div>
+          </div>
+
         <div class="field">
           <label>Formato <button type="button" class="info" data-tip="Horizontal es para YouTube y pantallas. Vertical es para TikTok, Reels y Shorts.">?</button></label>
           <div class="seg" id="ratioSeg">
@@ -162,13 +190,10 @@
             </div>
           </div>
         </details>
+        </div>
       </div>
 
       <div class="generate-wrap">
-        <div class="target-row">
-          <span>Guardar en</span>
-          <select id="targetProject" data-tip="El proyecto donde se guardará este video"></select>
-        </div>
         <button class="generate" id="generateBtn">
           <span class="g-label">
             <svg class="i" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
@@ -200,6 +225,10 @@
         <button class="tool-btn" id="compareBtn" data-tip="Elige de 2 a 4 videos y míralos lado a lado">
           <svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg>
           Comparar
+        </button>
+        <button class="tool-btn" id="editorBtn" data-tip="Une tus clips en un solo video: ordena, recorta, añade fundidos y música">
+          <svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+          Editor
         </button>
       </div>
 
@@ -378,11 +407,93 @@
     </div>
   </div>
 
-  <!-- Recetas -->
+  <!-- Biblia del proyecto -->
+  <div class="modal" id="bibleModal" hidden>
+    <div class="modal-card wide">
+      <button class="icon-btn modal-x" data-close data-tip="Cerrar (Esc)"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <h2 class="modal-title">Biblia de <span id="bibleName"></span></h2>
+      <p class="muted">Las reglas de este proyecto. Se aplican solas a cada video que crees en él, para que toda la serie se vea igual.</p>
+
+      <div class="field bible-field">
+        <label for="bibleStyle">Estilo base <button type="button" class="info" data-tip="Cómo se ve y se siente TODO el proyecto: colores, luz, tipo de cámara, época, ambiente, idioma de los diálogos.">?</button></label>
+        <textarea id="bibleStyle" rows="4" placeholder="Ej.: Estilo cine, colores cálidos y desaturados, cámara en mano suave, luz natural de tarde, ambiente nostálgico. Diálogos en español latino."></textarea>
+      </div>
+      <div class="field bible-field">
+        <label for="bibleAvoid">Evitar siempre <button type="button" class="info" data-tip="Lo que nunca quieres ver. Toca las sugerencias para añadirlas.">?</button></label>
+        <textarea id="bibleAvoid" rows="2" placeholder="Ej.: texto en pantalla, marcas de agua, subtítulos"></textarea>
+        <div class="chips" id="avoidChips"></div>
+      </div>
+      <div class="bible-grid">
+        <div class="field">
+          <label for="bibleStyleId">Estilo guardado</label>
+          <select id="bibleStyleId"></select>
+        </div>
+        <div class="field">
+          <label for="bibleSeed">Semilla fija <button type="button" class="info" data-tip="Usar siempre el mismo número ayuda a que la «textura» visual se parezca entre escenas. Déjalo vacío para que cada video sea distinto.">?</button></label>
+          <div class="seed-row">
+            <input id="bibleSeed" type="number" min="0" placeholder="Sin semilla fija" />
+            <button class="ghost-btn" id="bibleDice" type="button" data-tip="Elegir un número al azar">
+              <svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="field bible-field">
+        <label>Personajes fijos <button type="button" class="info" data-tip="Se eligen solos cuando trabajas en este proyecto.">?</button></label>
+        <div class="char-row" id="bibleChars"></div>
+      </div>
+      <label class="switch-row">
+        <input type="checkbox" id="bibleDefaults" />
+        <span class="switch"></span>
+        <span>Usar los ajustes actuales como los del proyecto <small class="muted" id="bibleDefaultsText"></small></span>
+      </label>
+
+      <div class="modal-foot">
+        <span class="muted small">Puedes cambiar todo cuando quieras.</span>
+        <button class="primary" id="bibleSave">Guardar biblia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mis estilos -->
+  <div class="modal" id="stylesModal" hidden>
+    <div class="modal-card wide">
+      <button class="icon-btn modal-x" data-close data-tip="Cerrar (Esc)"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <h2 class="modal-title">Mis estilos</h2>
+      <p class="muted">Guarda cómo quieres que se vean tus videos y úsalo con un clic.</p>
+      <div class="style-form">
+        <input type="hidden" id="styleId" />
+        <input type="text" id="styleName" maxlength="40" placeholder="Nombre del estilo. Ej.: Noir lluvioso" />
+        <div class="prompt-box small">
+          <textarea id="styleText" rows="3" placeholder="Ej.: blanco y negro con alto contraste, lluvia constante, luces de neón reflejadas, cámara lenta y baja, ambiente de misterio."></textarea>
+          <div class="prompt-foot"><span class="muted small" id="styleExample"></span>
+            <button type="button" class="ai-btn" id="styleImprove" data-tip="La IA convierte unas pocas palabras en un estilo completo">
+              <svg class="i sm" viewBox="0 0 24 24"><path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z"/></svg><span>Mejorar con IA</span>
+            </button>
+          </div>
+        </div>
+        <div class="modal-foot end">
+          <button type="button" class="btn sm" id="styleReset">Nuevo</button>
+          <button type="button" class="primary" id="styleSave">Guardar estilo</button>
+        </div>
+      </div>
+      <div class="style-list" id="styleList"></div>
+    </div>
+  </div>
+
+  <!-- Selector de estilo -->
+  <div class="popover style-pop" id="stylePop" hidden>
+    <div class="pop-head"><b>Estilo</b><button class="link-btn" id="stylesBtn" data-tip="Crear, editar y borrar tus estilos">Mis estilos</button></div>
+    <div class="sp-list" id="spList"></div>
+    <div class="sp-sec">Toques <button type="button" class="info" data-tip="Detalles que se suman al estilo. Puedes elegir varios.">?</button></div>
+    <div class="chips" id="touchChips"></div>
+  </div>
+
+  <!-- Plantillas -->
   <div class="popover" id="recipesPop" hidden>
     <div class="pop-head">
-      <b>Mis recetas</b>
-      <button class="link-btn" id="recipeSave" data-tip="Guarda la descripción y los ajustes actuales para usarlos otra vez">+ Guardar la actual</button>
+      <b>Mis plantillas</b>
+      <button class="link-btn" id="recipeSave" data-tip="Guarda la descripción, el estilo, los ajustes y los personajes actuales">+ Guardar la actual</button>
     </div>
     <div class="pop-list" id="recipeList"></div>
   </div>
@@ -426,10 +537,83 @@
     </div>
   </div>
 
+  <!-- Editor -->
+  <div class="modal" id="editor" hidden>
+    <div class="editor-card">
+      <header class="ed-head">
+        <div class="ed-title">
+          <span class="ed-logo"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></span>
+          <select id="edPick" data-tip="Elige qué episodio editar o crea uno nuevo"></select>
+          <button class="icon-btn" id="edRename" data-tip="Cambiar el nombre del episodio"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg></button>
+          <button class="icon-btn" id="edDelete" data-tip="Borrar este episodio (tus videos no se borran)"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+          <span class="ed-saved" id="edSaved"></span>
+        </div>
+        <div class="ed-actions">
+          <button class="btn sm" id="edView" hidden data-tip="Abrir el episodio exportado">Ver episodio</button>
+          <button class="btn primary sm ed-export" id="edExport"><span>Exportar episodio</span></button>
+          <button class="icon-btn" data-close data-tip="Cerrar (Esc). Todo queda guardado."><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+      </header>
+
+      <div class="ed-ffmpeg" id="edNoFf" hidden>
+        <div>
+          <strong>Para exportar falta FFmpeg</strong>
+          <span>Es un programa gratis que arma el video final. La vista previa ya funciona sin él. Para instalarlo, abre <b>PowerShell</b>, pega este comando y presiona Enter. Luego cierra la ventana negra y abre <b>Iniciar.bat</b> otra vez.</span>
+          <code>winget install Gyan.FFmpeg</code>
+        </div>
+        <div class="ed-ff-btns">
+          <button class="btn sm" id="edFfCopy">Copiar comando</button>
+          <button class="btn sm" id="edFfRetry">Ya lo instalé</button>
+        </div>
+      </div>
+
+      <div class="ed-body">
+        <aside class="ed-bin">
+          <div class="ed-bin-head">
+            <h3>Tus clips</h3>
+            <button class="link-btn" id="edAddAll" data-tip="Añade al episodio todos los clips que faltan, en el orden en que los creaste">Añadir todos</button>
+          </div>
+          <select id="edBinProject" data-tip="Qué videos mostrar"></select>
+          <div class="ed-bin-list" id="edBin"></div>
+        </aside>
+
+        <section class="ed-stage">
+          <div class="ed-stage-box" id="edStageBox">
+            <div class="ed-screen" id="edScreen">
+              <video id="edA" playsinline preload="auto"></video>
+              <video id="edB" playsinline preload="auto"></video>
+              <div class="ed-empty" id="edEmpty">
+                <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+                <p>Tu episodio aparecerá aquí</p>
+              </div>
+            </div>
+          </div>
+          <div class="ed-transport">
+            <button class="icon-btn" id="edRestart" data-tip="Volver al inicio"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M19 5 9 12l10 7V5Z"/></svg></button>
+            <button class="ed-play" id="edPlay" data-tip="Reproducir (barra espaciadora)"><svg class="i" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5-13-7.5Z"/></svg></button>
+            <span class="ed-time" id="edTime">0:00 / 0:00</span>
+          </div>
+        </section>
+
+        <aside class="ed-side" id="edSide"></aside>
+      </div>
+
+      <div class="ed-tl-wrap">
+        <div class="ed-tl-head"><span>Línea de tiempo</span><span class="muted" id="edTotal"></span></div>
+        <div class="ed-timeline" id="edTimeline">
+          <div class="ed-track" id="edTrack"></div>
+          <div class="ed-playhead" id="edHead" hidden></div>
+        </div>
+      </div>
+      <audio id="edMusic" loop preload="auto"></audio>
+    </div>
+  </div>
+
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <script src="/vendor/qrcode.js"></script>
   <script src="/app.js" type="module"></script>
+  <script src="/editor.js" type="module"></script>
 </body>
 </html>

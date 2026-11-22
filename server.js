@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { exec } from 'node:child_process';
+import { exec, execFile, spawn } from 'node:child_process';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -22,7 +22,10 @@ const FILES = {
   settings: path.join(DATA_DIR, 'settings.json'),
   characters: path.join(DATA_DIR, 'characters.json'),
   recipes: path.join(DATA_DIR, 'recipes.json'),
+  styles: path.join(DATA_DIR, 'styles.json'),
+  edits: path.join(DATA_DIR, 'edits.json'),
 };
+const MUSIC_DIR = path.join(DATA_DIR, 'music');
 const ENV_FILE = path.join(ROOT, '.env');
 
 const KIE_API = 'https://api.kie.ai';
@@ -86,6 +89,7 @@ async function saveApiKey(key) {
 // ---------- Datos locales ----------
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+fs.mkdirSync(MUSIC_DIR, { recursive: true });
 const readJsonFile = (f, fallback) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return fallback; } };
 const timers = {};
 const debounce = (key, ms, fn) => { clearTimeout(timers[key]); timers[key] = setTimeout(fn, ms); };
@@ -94,9 +98,11 @@ const writeLater = (key, file, getData) => debounce(key, 200, () => fsp.writeFil
 let history = readJsonFile(FILES.history, []);
 let characters = readJsonFile(FILES.characters, []);
 let recipes = readJsonFile(FILES.recipes, []);
+let styles = readJsonFile(FILES.styles, []);
+let edits = readJsonFile(FILES.edits, []);
 const settings = {
   maxConcurrent: 2, paused: false, pauseReason: '',
-  dailyLimit: 0, projects: [],
+  dailyLimit: 0, projects: [], bibles: {},
   lan: { enabled: false, token: crypto.randomBytes(12).toString('hex') },
   ...readJsonFile(FILES.settings, {}),
 };
@@ -115,6 +121,9 @@ const saveHistory = () => writeLater('h', FILES.history, () => history);
 const saveSettings = () => writeLater('s', FILES.settings, () => settings);
 const saveCharacters = () => writeLater('c', FILES.characters, () => characters);
 const saveRecipes = () => writeLater('r', FILES.recipes, () => recipes);
+const saveStyles = () => writeLater('st', FILES.styles, () => styles);
+const saveEdits = () => writeLater('ed', FILES.edits, () => edits);
+for (const e of edits) if (e.render?.state === 'working') e.render = { state: 'failed', error: 'Se cerró el estudio mientras se exportaba. Vuelve a exportar.' };
 
 // ---------- Eventos en vivo (Server-Sent Events) ----------
 const clients = new Set();
@@ -484,6 +493,14 @@ refreshCredits();
 async function improvePrompt({ prompt, mode, characters: names = [], duration }) {
   const text = String(prompt || '').trim();
   if (!text) throw new Error('Escribe primero una idea, aunque sea corta.');
+  if (mode === 'style') {
+    const system = 'Eres director de fotografía. A partir del texto del usuario, escribe SOLO un ESTILO VISUAL reutilizable para videos de IA, en el MISMO idioma del usuario: paleta de colores, iluminación, tipo de lente y cámara, movimiento de cámara, textura o grano, época y ambiente. No incluyas personajes, lugares concretos ni acciones. Máximo 50 palabras, una sola frase descriptiva, sin comillas ni explicaciones.';
+    const json = await kie(CHAT_MODEL_PATH, { method: 'POST', raw: true, body: { messages: [{ role: 'system', content: [{ type: 'text', text: system }] }, { role: 'user', content: [{ type: 'text', text }] }], stream: false } });
+    const out = String(json.choices?.[0]?.message?.content || '').trim().replace(/^["“]|["”]$/g, '');
+    if (!out) throw new Error('La IA no devolvió un estilo. Intenta de nuevo.');
+    refreshCreditsSoon();
+    return { prompt: out, credits: json.credits_consumed ?? null };
+  }
   const modeHint = {
     text: 'El video se crea solo a partir del texto.',
     images: 'El usuario adjunta imágenes de referencia; menciónalas como "la persona/el producto de la imagen" sin inventar su aspecto.',
@@ -552,10 +569,191 @@ const lanInfo = () => {
 const isLocal = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
 const cookieToken = (req) => (req.headers.cookie || '').match(/(?:^|;\s*)ofs_t=([a-f0-9]+)/)?.[1];
 
+// ---------- Editor: unir escenas en un episodio (con FFmpeg) ----------
+let ffmpegBin = null, ffprobeBin = null, ffLastCheck = 0;
+const runOk = (bin, args) => new Promise((r) => execFile(bin, args, { windowsHide: true, timeout: 10000 }, (e) => r(!e)));
+async function findFfmpeg() {
+  if (ffmpegBin) return ffmpegBin;
+  if (Date.now() - ffLastCheck < 15000) return null;
+  ffLastCheck = Date.now();
+  const exe = process.platform === 'win32' ? '.exe' : '';
+  const cands = [process.env.FFMPEG_PATH, env.FFMPEG_PATH, 'ffmpeg'].filter(Boolean);
+  if (process.platform === 'win32') {
+    const la = process.env.LOCALAPPDATA || '';
+    cands.push(path.join(la, 'Microsoft', 'WinGet', 'Links', 'ffmpeg.exe'));
+    const pk = path.join(la, 'Microsoft', 'WinGet', 'Packages');
+    try {
+      for (const d of fs.readdirSync(pk).filter((n) => /ffmpeg/i.test(n))) {
+        for (const sub of fs.readdirSync(path.join(pk, d))) cands.push(path.join(pk, d, sub, 'bin', 'ffmpeg.exe'));
+      }
+    } catch {}
+    cands.push('C:\\ffmpeg\\bin\\ffmpeg.exe', path.join(process.env.ProgramFiles || 'C:\\Program Files', 'ffmpeg', 'bin', 'ffmpeg.exe'));
+  } else cands.push('/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg');
+  for (const c of cands) {
+    if (await runOk(c, ['-version'])) {
+      ffmpegBin = c;
+      ffprobeBin = c === 'ffmpeg' ? 'ffprobe' : path.join(path.dirname(c), 'ffprobe' + exe);
+      console.log(`  🎞  FFmpeg listo para el editor: ${c}`);
+      return c;
+    }
+  }
+  return null;
+}
+function probe(file) {
+  return new Promise((resolve) => {
+    if (!ffprobeBin) return resolve({ duration: 0, hasAudio: true });
+    execFile(ffprobeBin, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', file], { windowsHide: true, timeout: 15000 }, (err, out) => {
+      try {
+        const j = JSON.parse(out);
+        resolve({ duration: Number(j.format?.duration) || 0, hasAudio: (j.streams || []).some((x) => x.codec_type === 'audio') });
+      } catch { resolve({ duration: 0, hasAudio: true }); }
+    });
+  });
+}
+findFfmpeg();
+
+const emitEdit = (e) => emit('edit', e);
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const round2 = (n) => Math.round(n * 100) / 100;
+function sanitizeEdit(e, b) {
+  if (b.name !== undefined) e.name = String(b.name || '').trim().slice(0, 60) || 'Episodio';
+  if (b.project !== undefined) e.project = String(b.project || '').slice(0, 40);
+  if (b.ratio !== undefined) e.ratio = b.ratio === '9:16' ? '9:16' : '16:9';
+  if (b.quality !== undefined) e.quality = ['auto', '720p', '1080p'].includes(b.quality) ? b.quality : 'auto';
+  if (b.transition !== undefined) e.transition = b.transition === 'fade' ? 'fade' : 'cut';
+  if (b.clipVolume !== undefined) e.clipVolume = clamp(Number(b.clipVolume) || 0, 0, 1);
+  if (b.musicVolume !== undefined && e.music) e.music.volume = clamp(Number(b.musicVolume) || 0, 0, 1);
+  if (Array.isArray(b.clips)) {
+    e.clips = b.clips.slice(0, 80).filter((c) => history.some((h) => h.id === c.itemId)).map((c) => {
+      const inn = Math.max(0, round2(Number(c.in) || 0));
+      const out = c.out == null ? null : Math.max(inn + 0.3, round2(Number(c.out) || 0));
+      return { key: String(c.key || crypto.randomBytes(4).toString('hex')).slice(0, 20), itemId: c.itemId, in: inn, out };
+    });
+  }
+  e.updatedAt = Date.now();
+  return e;
+}
+let renderBusy = false;
+
+async function renderEdit(edit) {
+  if (renderBusy) throw new Error('Ya se está exportando otro episodio. Espera a que termine.');
+  renderBusy = true;
+  edit.render = { state: 'working', pct: 0, file: edit.render?.file, itemId: edit.render?.itemId };
+  emitEdit(edit);
+  try {
+    const ff = await findFfmpeg();
+    if (!ff) throw new Error('Para exportar necesitas FFmpeg (es gratis). Mira cómo instalarlo en el editor.');
+    const clips = edit.clips.map((c) => ({ ...c, item: history.find((h) => h.id === c.itemId) })).filter((c) => c.item?.localFile);
+    if (!clips.length) throw new Error('Añade al menos un clip guardado en tu PC.');
+    for (const c of clips) {
+      c.file = path.join(VIDEOS_DIR, c.item.localFile);
+      c.info = await probe(c.file);
+      const D = c.info.duration || Number(c.item.settings?.duration) || 5;
+      c.in = clamp(c.in || 0, 0, Math.max(0, D - 0.3));
+      c.out = clamp(c.out == null ? D : c.out, c.in + 0.3, D);
+      c.len = round2(c.out - c.in);
+    }
+    const vertical = edit.ratio === '9:16';
+    const hiRes = ['1080p', '4k', '1080P', '2K', '4K'];
+    const hi = edit.quality === '1080p' || (edit.quality !== '720p' && clips.some((c) => hiRes.includes(c.item.settings?.resolution)));
+    const [W, H] = hi ? (vertical ? [1080, 1920] : [1920, 1080]) : (vertical ? [720, 1280] : [1280, 720]);
+    const F = edit.transition === 'fade' && clips.length > 1 ? round2(Math.min(0.6, ...clips.map((c) => c.len / 2.5))) : 0;
+    const total = clips.reduce((a, c) => a + c.len, 0) - F * (clips.length - 1);
+    const vol = clamp(edit.clipVolume ?? 1, 0, 1);
+
+    const args = ['-y', '-hide_banner', '-loglevel', 'error', '-nostats', '-progress', 'pipe:1'];
+    for (const c of clips) args.push('-ss', c.in.toFixed(3), '-t', c.len.toFixed(3), '-i', c.file);
+    const music = edit.music && fs.existsSync(path.join(MUSIC_DIR, edit.music.file)) ? edit.music : null;
+    if (music) args.push('-stream_loop', '-1', '-i', path.join(MUSIC_DIR, music.file));
+
+    const f = [];
+    clips.forEach((c, i) => {
+      const L = c.len.toFixed(3);
+      f.push(`[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,format=yuv420p,trim=duration=${L},setpts=PTS-STARTPTS[v${i}]`);
+      if (c.info.hasAudio) f.push(`[${i}:a]aformat=sample_rates=48000:channel_layouts=stereo,atrim=duration=${L},asetpts=PTS-STARTPTS,apad,atrim=duration=${L},volume=${vol}[a${i}]`);
+      else f.push(`anullsrc=r=48000:cl=stereo,atrim=duration=${L}[a${i}]`);
+    });
+    if (clips.length === 1) f.push('[v0]null[vj]', '[a0]anull[aj]');
+    else if (!F) f.push(`${clips.map((_, i) => `[v${i}][a${i}]`).join('')}concat=n=${clips.length}:v=1:a=1[vj][aj]`);
+    else {
+      let off = clips[0].len - F, pv = 'v0', pa = 'a0';
+      for (let i = 1; i < clips.length; i++) {
+        const last = i === clips.length - 1;
+        const nv = last ? 'vj' : `xv${i}`, na = last ? 'aj' : `xa${i}`;
+        f.push(`[${pv}][v${i}]xfade=transition=fade:duration=${F}:offset=${off.toFixed(3)}[${nv}]`);
+        f.push(`[${pa}][a${i}]acrossfade=d=${F}:c1=tri:c2=tri[${na}]`);
+        off += clips[i].len - F; pv = nv; pa = na;
+      }
+    }
+    let aOut = 'aj';
+    if (music) {
+      const mv = clamp(music.volume ?? 0.35, 0, 1);
+      const fo = Math.min(2, total / 3);
+      f.push(`[${clips.length}:a]aformat=sample_rates=48000:channel_layouts=stereo,atrim=duration=${total.toFixed(3)},asetpts=PTS-STARTPTS,volume=${mv},afade=t=in:d=0.4,afade=t=out:st=${Math.max(0, total - fo).toFixed(3)}:d=${fo.toFixed(3)}[mus]`);
+      f.push('[aj][mus]amix=inputs=2:duration=first:normalize=0[am]');
+      aOut = 'am';
+    }
+    const base = `episodio-${safeName(edit.name).slice(0, 40) || 'sin-nombre'}-${edit.id.slice(-6)}`;
+    const file = `${base}-${Date.now().toString(36)}.mp4`;
+    const tmp = path.join(VIDEOS_DIR, `${base}.tmp.mp4`);
+    args.push('-filter_complex', f.join(';'), '-map', '[vj]', '-map', `[${aOut}]`,
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-t', total.toFixed(3), tmp);
+
+    await new Promise((resolve, reject) => {
+      const child = spawn(ff, args, { windowsHide: true });
+      let errTxt = '', lastEmit = 0;
+      child.stdout.on('data', (d) => {
+        const m = String(d).match(/out_time_us=(\d+)/g);
+        if (!m) return;
+        const us = Number(m.at(-1).split('=')[1]);
+        edit.render.pct = clamp(Math.round((us / 1e6 / total) * 100), 0, 99);
+        if (Date.now() - lastEmit > 400) { lastEmit = Date.now(); emitEdit(edit); }
+      });
+      child.stderr.on('data', (d) => { errTxt = (errTxt + d).slice(-2000); });
+      child.on('error', reject);
+      child.on('close', (code) => {
+        if (code === 0) return resolve();
+        console.log(`[Editor] FFmpeg falló (${code}):\n${errTxt}`);
+        reject(new Error('FFmpeg no pudo armar el episodio. Revisa la ventana negra para ver el detalle.'));
+      });
+    });
+
+    await fsp.rename(tmp, path.join(VIDEOS_DIR, file));
+    const size = (await fsp.stat(path.join(VIDEOS_DIR, file))).size;
+    // El episodio aparece en la galería como un video más (se reemplaza la exportación anterior)
+    let item = history.find((h) => h.id === edit.render?.itemId);
+    if (item?.localFile && item.localFile !== file) await fsp.rm(path.join(VIDEOS_DIR, item.localFile), { force: true });
+    const pv = clips[0].item.previews || {};
+    const fields = {
+      state: 'done', mode: 'edit', model: 'edit', kind: 'edit', prompt: edit.name,
+      settings: { duration: round1(total), aspect_ratio: edit.ratio, resolution: hi ? '1080p' : '720p' },
+      previews: { first: pv.first || pv.video || pv.images?.[0] || '' },
+      credits: 0, project: edit.project || '', localFile: file, fileSize: size, editId: edit.id,
+      clipsCount: clips.length, completedAt: Date.now(), inputs: {},
+    };
+    if (item) Object.assign(item, fields);
+    else {
+      item = { id: 'v_' + crypto.randomBytes(6).toString('hex'), createdAt: Date.now(), ...fields };
+      history.push(item);
+    }
+    changed(item);
+    edit.render = { state: 'done', pct: 100, file, itemId: item.id, at: Date.now() };
+  } catch (err) {
+    edit.render = { state: 'failed', error: err.message, itemId: edit.render?.itemId };
+    throw err;
+  } finally {
+    renderBusy = false;
+    saveEdits();
+    emitEdit(edit);
+  }
+}
+
 // ---------- HTTP ----------
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.mp4': 'video/mp4', '.json': 'application/json',
+  '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.flac': 'audio/flac',
 };
 function send(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -583,14 +781,15 @@ async function serveStatic(req, res, baseDir, rel) {
   if (stat.isDirectory()) return serveStatic(req, res, baseDir, path.join(rel, 'index.html'));
   const type = MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
   const range = req.headers.range;
-  if (range && type === 'video/mp4') {
+  const media = type === 'video/mp4' || type.startsWith('audio/');
+  if (range && media) {
     const [s, e] = range.replace('bytes=', '').split('-');
     const start = Number(s) || 0;
     const end = e ? Math.min(Number(e), stat.size - 1) : stat.size - 1;
     res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${stat.size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1 });
     return fs.createReadStream(filePath, { start, end }).pipe(res);
   }
-  res.writeHead(200, { 'Content-Type': type, 'Content-Length': stat.size, 'Cache-Control': 'no-cache', 'Accept-Ranges': type === 'video/mp4' ? 'bytes' : 'none' });
+  res.writeHead(200, { 'Content-Type': type, 'Content-Length': stat.size, 'Cache-Control': 'no-cache', 'Accept-Ranges': media ? 'bytes' : 'none' });
   fs.createReadStream(filePath).pipe(res);
 }
 function findItem(id) {
@@ -730,6 +929,52 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
 
+    // Estilos guardados
+    if (p === '/api/styles' && req.method === 'GET') return send(res, 200, styles);
+    if (p === '/api/styles' && req.method === 'POST') {
+      const b = await readJson(req);
+      const name = String(b.name || '').trim().slice(0, 40);
+      const text = String(b.text || '').trim().slice(0, 2000);
+      if (!name) throw new Error('Ponle un nombre al estilo.');
+      if (!text) throw new Error('Describe el estilo (colores, luz, cámara, ambiente).');
+      let st = b.id && styles.find((x) => x.id === b.id);
+      if (st) Object.assign(st, { name, text, exampleId: b.exampleId ?? st.exampleId });
+      else { st = { id: 's_' + crypto.randomBytes(5).toString('hex'), name, text, exampleId: b.exampleId || '', createdAt: Date.now() }; styles.unshift(st); }
+      saveStyles();
+      emit('styles', styles);
+      return send(res, 200, st);
+    }
+    const mst = p.match(/^\/api\/styles\/([\w\-]+)$/);
+    if (mst && req.method === 'DELETE') {
+      styles = styles.filter((x) => x.id !== mst[1]);
+      for (const k of Object.keys(settings.bibles)) if (settings.bibles[k].styleId === mst[1]) settings.bibles[k].styleId = '';
+      saveStyles(); saveSettings();
+      emit('styles', styles); emit('bibles', settings.bibles);
+      return send(res, 200, { ok: true });
+    }
+
+    // Biblia de un proyecto (su «system prompt»)
+    const mb = p.match(/^\/api\/projects\/(.+)\/bible$/);
+    if (mb && req.method === 'POST') {
+      const name = decodeURIComponent(mb[1]);
+      if (!settings.projects.includes(name)) throw new Error('Ese proyecto no existe.');
+      const b = await readJson(req);
+      const clip = (v, n) => String(v || '').trim().slice(0, n);
+      settings.bibles[name] = {
+        style: clip(b.style, 3000), avoid: clip(b.avoid, 1000), styleId: clip(b.styleId, 40),
+        chars: Array.isArray(b.chars) ? b.chars.slice(0, 3).map(String) : [],
+        seed: b.seed === '' || b.seed == null ? '' : Math.abs(Math.floor(Number(b.seed))) || '',
+        defaults: b.defaults && typeof b.defaults === 'object' ? {
+          model: ['1.1', '1.2'].includes(b.defaults.model) ? b.defaults.model : undefined,
+          ratio: ['16:9', '9:16'].includes(b.defaults.ratio) ? b.defaults.ratio : undefined,
+          resolution: ['360p', '720p', '1080p', '4k'].includes(b.defaults.resolution) ? b.defaults.resolution : undefined,
+        } : null,
+      };
+      saveSettings();
+      emit('bibles', settings.bibles);
+      return send(res, 200, settings.bibles[name]);
+    }
+
     // Proyectos
     if (p === '/api/projects' && req.method === 'POST') {
       const b = await readJson(req);
@@ -744,6 +989,8 @@ const server = http.createServer(async (req, res) => {
     if (mp && req.method === 'DELETE') {
       const name = decodeURIComponent(mp[1]);
       settings.projects = settings.projects.filter((x) => x !== name);
+      delete settings.bibles[name];
+      emit('bibles', settings.bibles);
       for (const h of history) if (h.project === name) { h.project = ''; changed(h); }
       saveSettings();
       emit('projects', settings.projects);
@@ -758,7 +1005,7 @@ const server = http.createServer(async (req, res) => {
       const items = [];
       for (let i = 0; i < count; i++) {
         const built = buildRequest({ ...b, seed: i > 0 && b.seed !== '' && b.seed != null ? Number(b.seed) + i : i > 0 ? '' : b.seed });
-        const it = newItem({ ...built, mode: b.mode, prompt: built.request.input.prompt, previews: b.previews, uploadedAt: Number(b.uploadedAt) || Date.now(), project: b.project, extra: batchId ? { batch: { id: batchId, n: i + 1, of: count } } : {} });
+        const it = newItem({ ...built, mode: b.mode, prompt: built.request.input.prompt, previews: b.previews, uploadedAt: Number(b.uploadedAt) || Date.now(), project: b.project, extra: { ...(batchId ? { batch: { id: batchId, n: i + 1, of: count } } : {}), userPrompt: String(b.userPrompt || '').trim() || undefined, styleName: b.styleName || undefined, fromId: b.fromId || undefined } });
         it.createdAt += i;
         items.push(it);
       }
@@ -768,7 +1015,7 @@ const server = http.createServer(async (req, res) => {
 
     // Historial
     if (p === '/api/history' && req.method === 'GET') {
-      return send(res, 200, { items: history.map(publicItem), queue: queueState(), credits, projects: settings.projects, recipes, characters, spending: spending() });
+      return send(res, 200, { items: history.map(publicItem), queue: queueState(), credits, projects: settings.projects, bibles: settings.bibles, styles, recipes, characters, spending: spending() });
     }
     const m = p.match(/^\/api\/history\/([\w\-]+)(?:\/(retry|extend|upscale|remake))?$/);
     if (m) {
@@ -814,7 +1061,7 @@ const server = http.createServer(async (req, res) => {
           settings: { duration: Number(item.settings.duration) + duration, aspect_ratio: item.settings.aspect_ratio, resolution: res2 },
           credits: estimateCredits({ model: 'extend', resolution: res2, duration }),
           previews: item.previews, project: item.project,
-          extra: { parentId: item.id, kind: 'extend', addedSeconds: duration, estimateOnly: true },
+          extra: { parentId: item.id, kind: 'extend', addedSeconds: duration, estimateOnly: true, userPrompt: String(b.userPrompt || '').trim() || undefined },
         });
         enqueue([copy]);
         return send(res, 200, { item: publicItem(copy) });
@@ -852,6 +1099,55 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Editor
+    if (p === '/api/edits' && req.method === 'GET') return send(res, 200, { edits, ffmpeg: !!(await findFfmpeg()) });
+    if (p === '/api/edits' && req.method === 'POST') {
+      const b = await readJson(req);
+      const e = sanitizeEdit({ id: 'e_' + crypto.randomBytes(5).toString('hex'), createdAt: Date.now(), name: 'Episodio', project: '', ratio: '16:9', quality: 'auto', transition: 'fade', clipVolume: 1, music: null, clips: [], render: null }, b);
+      edits.push(e); saveEdits(); emitEdit(e);
+      return send(res, 200, { edit: e });
+    }
+    const em = p.match(/^\/api\/edits\/(e_[a-f0-9]+)(?:\/(music|render))?$/);
+    if (em) {
+      const e = edits.find((x) => x.id === em[1]);
+      if (!e) return send(res, 404, { error: 'Ese episodio ya no existe.' });
+      const action = em[2];
+      if (!action && req.method === 'PUT') { sanitizeEdit(e, await readJson(req)); saveEdits(); emitEdit(e); return send(res, 200, { edit: e }); }
+      if (!action && req.method === 'DELETE') {
+        if (e.render?.state === 'working') return send(res, 409, { error: 'Espera a que termine de exportarse.' });
+        edits.splice(edits.indexOf(e), 1);
+        if (e.music) await fsp.rm(path.join(MUSIC_DIR, e.music.file), { force: true });
+        saveEdits(); emit('edit-remove', { id: e.id });
+        return send(res, 200, { ok: true });
+      }
+      if (action === 'music' && req.method === 'POST') {
+        const name = decodeURIComponent(String(req.headers['x-filename'] || 'musica.mp3')).slice(0, 80);
+        const ext = (path.extname(name).toLowerCase().match(/^\.(mp3|m4a|aac|wav|ogg|flac)$/) || ['.mp3'])[0];
+        const buf = await readBody(req, 60 * 1024 * 1024);
+        if (!buf.length) return send(res, 400, { error: 'El archivo de música está vacío.' });
+        const file = `m_${crypto.randomBytes(6).toString('hex')}${ext}`;
+        await fsp.writeFile(path.join(MUSIC_DIR, file), buf);
+        if (e.music) await fsp.rm(path.join(MUSIC_DIR, e.music.file), { force: true });
+        await findFfmpeg();
+        const info = await probe(path.join(MUSIC_DIR, file));
+        e.music = { file, name: name.replace(/\.[^.]+$/, ''), volume: e.music?.volume ?? 0.35, duration: round2(info.duration) };
+        e.updatedAt = Date.now(); saveEdits(); emitEdit(e);
+        return send(res, 200, { edit: e });
+      }
+      if (action === 'music' && req.method === 'DELETE') {
+        if (e.music) await fsp.rm(path.join(MUSIC_DIR, e.music.file), { force: true });
+        e.music = null; e.updatedAt = Date.now(); saveEdits(); emitEdit(e);
+        return send(res, 200, { edit: e });
+      }
+      if (action === 'render' && req.method === 'POST') {
+        if (!(await findFfmpeg())) return send(res, 400, { error: 'Para exportar necesitas FFmpeg (es gratis). Mira cómo instalarlo en el editor.', code: 'NO_FFMPEG' });
+        if (renderBusy) return send(res, 409, { error: 'Ya se está exportando otro episodio. Espera a que termine.' });
+        if (!e.clips.length) return send(res, 400, { error: 'Añade al menos un clip.' });
+        renderEdit(e).catch(() => {});
+        return send(res, 200, { edit: e });
+      }
+    }
+
     // Ajustes de la cola
     if (p === '/api/queue' && req.method === 'POST') {
       const b = await readJson(req);
@@ -872,6 +1168,7 @@ const server = http.createServer(async (req, res) => {
 
     if (p.startsWith('/api/')) return send(res, 404, { error: 'No encontrado' });
     if (p.startsWith('/videos/')) return serveStatic(req, res, VIDEOS_DIR, decodeURIComponent(p.slice(8)));
+    if (p.startsWith('/music/')) return serveStatic(req, res, MUSIC_DIR, decodeURIComponent(p.slice(7)));
     return serveStatic(req, res, PUBLIC_DIR, decodeURIComponent(p));
   } catch (err) {
     send(res, err.status || (err instanceof KieError ? 502 : 400), { error: err.message || 'Algo salió mal.', code: err.code });

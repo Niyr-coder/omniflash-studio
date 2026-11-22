@@ -9,6 +9,7 @@ const UPLOAD_TTL = 23 * 3600 * 1000;
 const RESULT_TTL = 13.5 * 24 * 3600 * 1000;
 
 const ICON = {
+  film: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',
   upload: '<svg class="i" viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   plus: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
@@ -31,6 +32,8 @@ const ICON = {
   sparkle: '<svg class="i" viewBox="0 0 24 24"><path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z"/></svg>',
   compare: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg>',
   sound: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
+  next: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="10" height="12" rx="2"/><path d="M16 12h5m-2-3 3 3-3 3"/></svg>',
+  palette: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.6-1.3-.6-2.1 0-.9.7-1.5 1.6-1.5H17a4 4 0 0 0 4-4c0-4.9-4-8.8-9-8.8Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7.5" r="1" fill="currentColor"/></svg>',
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 6m0-6-4 6"/></svg>',
 };
 
@@ -40,7 +43,7 @@ const MODES = {
   frames: 'Elige cómo empieza el video y, si quieres, cómo termina. La IA crea lo que pasa en medio.',
   video: 'Sube un video corto y describe cómo quieres transformarlo.',
 };
-const MODE_NAMES = { text: 'Texto', images: 'Imágenes', frames: 'Inicio y fin', video: 'Video', extend: 'Continuación', upscale: 'Mejorado' };
+const MODE_NAMES = { text: 'Texto', images: 'Imágenes', frames: 'Inicio y fin', video: 'Video', extend: 'Continuación', upscale: 'Mejorado', edit: 'Editor' };
 const MODEL_INFO = {
   '1.2': { durations: [4, 6, 8, 10, 12, 15], maxImg: 6, maxChar: 2, maxVideo: 15, seedMin: 10000, seedMax: 99999 },
   '1.1': { durations: [4, 6, 8, 10], maxImg: 7, maxChar: 3, maxVideo: 30, seedMin: 0, seedMax: 2147483647 },
@@ -54,15 +57,23 @@ const VOICES = [
   ['pulcherrima', 'directa'], ['zubenelgenubi', 'casual'], ['gacrux', 'madura'], ['algenib', 'ronca'], ['enceladus', 'susurrante'],
 ];
 
-const STYLES = [
-  ['Cine', 'estilo cinematográfico, lente anamórfico, profundidad de campo', 'Se ve como una película'],
-  ['Animación 3D', 'animación 3D estilo película de estudio, colores vivos', 'Como una película animada'],
-  ['Anime', 'estilo anime, trazos limpios, colores saturados', 'Dibujo animado japonés'],
-  ['Documental', 'estilo documental, cámara en mano, luz natural', 'Realista, como grabado en la vida real'],
-  ['Hora dorada', 'luz dorada del atardecer, sombras largas y cálidas', 'Luz cálida del atardecer'],
-  ['Cámara lenta', 'en cámara lenta', 'El movimiento va más despacio'],
-  ['Drone', 'toma aérea con drone, movimiento suave', 'Vista desde el aire'],
-  ['Producto', 'anuncio de producto, estudio limpio, iluminación suave, giro de cámara', 'Para mostrar algo que vendes'],
+// Estilos incluidos (se elige uno) y toques (se suman varios)
+const BUILTIN_STYLES = [
+  { id: 'b_cine', name: 'Cine', text: 'estilo cinematográfico, lente anamórfico, profundidad de campo, colores ricos', help: 'Se ve como una película' },
+  { id: 'b_3d', name: 'Animación 3D', text: 'animación 3D estilo película de estudio, colores vivos, iluminación suave', help: 'Como una película animada' },
+  { id: 'b_anime', name: 'Anime', text: 'estilo anime, trazos limpios, colores saturados', help: 'Dibujo animado japonés' },
+  { id: 'b_doc', name: 'Documental', text: 'estilo documental realista, cámara en mano, luz natural', help: 'Realista, como grabado en la vida real' },
+  { id: 'b_producto', name: 'Anuncio de producto', text: 'anuncio de producto, estudio limpio, iluminación suave, giro de cámara alrededor del producto', help: 'Para mostrar algo que vendes' },
+  { id: 'b_vintage', name: 'Película antigua', text: 'película de 16 mm, grano visible, colores desvaídos, aire nostálgico', help: 'Como un video de hace décadas' },
+];
+const TOUCHES = [
+  ['t_lenta', 'Cámara lenta', 'en cámara lenta'],
+  ['t_drone', 'Drone', 'toma aérea con drone, movimiento suave'],
+  ['t_dorada', 'Hora dorada', 'luz dorada del atardecer, sombras largas'],
+  ['t_noche', 'Noche', 'de noche, luces artificiales'],
+  ['t_lluvia', 'Lluvia', 'con lluvia'],
+  ['t_cerca', 'Primer plano', 'planos cercanos, detalles'],
+  ['t_mano', 'Cámara en mano', 'cámara en mano, movimiento natural'],
 ];
 const IDEAS = [
   'Un astronauta camina por un mercado nocturno en Tokio bajo la lluvia, letreros de neón reflejados en los charcos, cámara siguiéndolo por detrás.',
@@ -88,6 +99,11 @@ const state = {
   count: saved.count || '1',
   targetProject: saved.targetProject || '',
   selectedChars: new Set(saved.selectedChars || []),
+  styleChoice: saved.styleChoice || '__auto',
+  touches: new Set(saved.touches || []),
+  settingsOpen: !!saved.settingsOpen,
+  bibles: {}, styles: [],
+  fromId: '',
   images: [], first: null, last: null, video: null,
   prices: null,
   credits: null,
@@ -101,7 +117,7 @@ const state = {
 };
 const persist = () => localStorage.setItem('ofs-settings', JSON.stringify({
   model: state.model, mode: state.mode, duration: state.duration, ratio: state.ratio, resolution: state.resolution,
-  count: state.count, targetProject: state.targetProject, selectedChars: [...state.selectedChars],
+  count: state.count, targetProject: state.targetProject, selectedChars: [...state.selectedChars], styleChoice: state.styleChoice, touches: [...state.touches], settingsOpen: state.settingsOpen,
 }));
 const mi = () => MODEL_INFO[state.model];
 
@@ -196,9 +212,9 @@ function closeModal(el, after) {
 }
 document.addEventListener('click', (e) => {
   const c = e.target.closest('[data-close]');
-  if (c) { const m = c.closest('.modal'); if (m.id === 'viewer') closeViewer(); else if (m.id === 'compare') closeCompare(); else closeModal(m); }
+  if (c) { const m = c.closest('.modal'); if (m.id === 'viewer') closeViewer(); else if (m.id === 'compare') closeCompare(); else if (m.id === 'editor') window.OFS.closeEditor(); else closeModal(m); }
   else if (e.target.classList?.contains('modal') && e.target.id !== 'keyModal') {
-    if (e.target.id === 'viewer') closeViewer(); else if (e.target.id === 'compare') closeCompare(); else closeModal(e.target);
+    if (e.target.id === 'viewer') closeViewer(); else if (e.target.id === 'compare') closeCompare(); else if (e.target.id === 'editor') window.OFS.closeEditor(); else closeModal(e.target);
   }
 });
 // Pregunta corta (en vez de la ventanita del navegador)
@@ -425,6 +441,40 @@ bindSeg('#resSeg', 'resolution');
 bindSeg('#countSeg', 'count');
 const syncAll = () => Object.values(syncs).forEach((f) => f());
 
+// Ajustes compactos: una línea resumen que se abre al tocarla
+function updateSummary() {
+  const parts = [
+    `Omni ${state.model}`,
+    state.ratio === '9:16' ? 'Vertical' : 'Horizontal',
+    state.mode === 'video' ? 'Duración del video' : `${state.duration} s`,
+    resLabel(state.resolution),
+  ];
+  if (state.count !== '1') parts.push(`${state.count} versiones`);
+  if ($('#seed').value) parts.push('Semilla fija');
+  $('#summaryText').innerHTML = parts.map((p) => `<span>${esc(p)}</span>`).join('');
+}
+function setSettingsOpen(open, animate = true) {
+  state.settingsOpen = open;
+  persist();
+  const panel = $('#settingsPanel'), btn = $('#settingsSummary');
+  btn.setAttribute('aria-expanded', open);
+  btn.classList.toggle('open', open);
+  btn.dataset.tip = open ? 'Ocultar los ajustes' : 'Modelo, formato, duración, calidad y versiones. Clic para cambiarlos.';
+  panel.getAnimations().forEach((a) => a.cancel());
+  if (!animate || reduceMotion) { panel.hidden = !open; if (open) positionIndicator(false); return; }
+  if (open) {
+    panel.hidden = false;
+    const h = panel.offsetHeight;
+    panel.style.overflow = 'hidden';
+    panel.animate([{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }], { duration: 300, easing: EASE }).onfinish = () => (panel.style.overflow = '');
+  } else {
+    panel.style.overflow = 'hidden';
+    panel.animate([{ height: `${panel.offsetHeight}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 220, easing: EASE }).onfinish = () => { panel.hidden = true; panel.style.overflow = ''; };
+  }
+}
+$('#settingsSummary').addEventListener('click', () => { hideTip(); setSettingsOpen(!state.settingsOpen); });
+$('#seed').addEventListener('input', updateSummary);
+
 $('#advanced summary').addEventListener('click', (e) => {
   const d = $('#advanced'), body = $('.advanced-body', d);
   if (reduceMotion) return;
@@ -451,6 +501,7 @@ function costFor({ model, resolution, duration, mode, videoSeconds }) {
 }
 const unitCost = () => costFor({ model: state.model, resolution: state.resolution, duration: state.duration, mode: state.mode, videoSeconds: Math.round(state.video?.length || 0) });
 function updateCost() {
+  updateSummary();
   if (!state.prices) return;
   const c = unitCost(), n = Number(state.count), t = c * n;
   const unknownVideo = state.mode === 'video' && state.model === '1.2' && !state.video;
@@ -483,28 +534,17 @@ function updateGenerate(flash) {
 
 // ---------- Texto ----------
 const promptEl = $('#prompt');
+const PROMPT_PLACEHOLDER = promptEl.placeholder;
 const autoGrow = () => { promptEl.style.height = 'auto'; promptEl.style.height = `${Math.min(Math.max(promptEl.scrollHeight, 104), 340)}px`; };
 promptEl.addEventListener('input', () => {
   $('#charCount').textContent = promptEl.value.length.toLocaleString('es');
   localStorage.setItem('ofs-prompt', promptEl.value);
-  syncChips(); autoGrow();
+  autoGrow(); renderFinal();
 });
 promptEl.value = localStorage.getItem('ofs-prompt') || '';
 $('#charCount').textContent = promptEl.value.length.toLocaleString('es');
 function setPrompt(v) { promptEl.value = v; promptEl.dispatchEvent(new Event('input')); }
 
-$('#styleChips').innerHTML = STYLES.map(([name, , help], i) => `<button type="button" class="chip" data-i="${i}" data-tip="${esc(help)}. Clic para añadirlo o quitarlo.">${esc(name)}</button>`).join('');
-function syncChips() { $$('#styleChips .chip').forEach((c) => c.classList.toggle('on', promptEl.value.includes(STYLES[c.dataset.i][1]))); }
-syncChips();
-$('#styleChips').addEventListener('click', (e) => {
-  const c = e.target.closest('.chip');
-  if (!c) return;
-  const text = STYLES[c.dataset.i][1];
-  let v = promptEl.value;
-  if (v.includes(text)) v = v.replace(new RegExp(`(,\\s*)?${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), '').replace(/^,\s*/, '');
-  else v = v.trim() ? `${v.trim().replace(/[.,]$/, '')}, ${text}` : text;
-  setPrompt(v);
-});
 let ideaIdx = Math.floor(Math.random() * IDEAS.length);
 $('#ideaBtn').addEventListener('click', () => {
   ideaIdx = (ideaIdx + 1) % IDEAS.length;
@@ -522,7 +562,7 @@ async function improveText(textarea, mode, btn, duration) {
   textarea.classList.add('thinking');
   try {
     const names = state.characters.filter((c) => state.selectedChars.has(c.id)).map((c) => c.name);
-    const { prompt, credits } = await post('/api/improve-prompt', { prompt: before, mode, characters: mode === 'extend' ? [] : names, duration });
+    const { prompt, credits } = await post('/api/improve-prompt', { prompt: before, mode, characters: mode === 'extend' || mode === 'style' ? [] : names, duration });
     textarea.value = prompt;
     textarea.dispatchEvent(new Event('input'));
     if (!reduceMotion) textarea.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 400 });
@@ -536,6 +576,7 @@ $('#improveBtn').addEventListener('click', (e) => improveText(promptEl, state.mo
 
 // ---------- Personajes ----------
 function renderChars() {
+  syncCharVisibility();
   const row = $('#charRow');
   const max = mi().maxChar;
   if (!state.characters.length) {
@@ -551,6 +592,13 @@ function renderChars() {
       <span class="avatar">${c.preview ? `<img src="${c.preview}" alt="">` : esc(c.name[0])}</span><span>${esc(c.name)}</span>${on ? ICON.check : ''}</button>`;
   }).join('');
 }
+// Sin personajes todavía: la fila se esconde y queda solo el botón «Personaje» junto a la descripción
+function syncCharVisibility() {
+  const none = !state.characters.length;
+  $('#charField').hidden = none;
+  $('#newCharBtn2').hidden = !none;
+}
+$('#newCharBtn2').addEventListener('click', () => openCharModal());
 $('#charRow').addEventListener('click', (e) => {
   if (e.target.closest('[data-new-char]')) return openCharModal();
   const b = e.target.closest('[data-char]');
@@ -649,10 +697,10 @@ function renderRecipes() {
       const d = r.data || {};
       return `<div class="recipe" data-recipe="${r.id}">
         <div><b>${esc(r.name)}</b><span>${esc(MODE_NAMES[d.mode] || '')} · Omni ${esc(d.model || '1.2')} · ${esc(d.duration || '')} s · ${esc(d.resolution || '')}</span><p>${esc((d.prompt || '').slice(0, 90))}${(d.prompt || '').length > 90 ? '…' : ''}</p></div>
-        <button class="icon-btn" data-del-recipe="${r.id}" data-tip="Borrar receta">${ICON.trash}</button>
+        <button class="icon-btn" data-del-recipe="${r.id}" data-tip="Borrar plantilla">${ICON.trash}</button>
       </div>`;
     }).join('')
-    : '<p class="muted small pop-empty">Aún no tienes recetas. Cuando una descripción te salga bien, guárdala aquí para repetirla con un clic.</p>';
+    : '<p class="muted small pop-empty">Aún no tienes plantillas. Cuando una idea te salga bien, guárdala aquí (descripción, estilo, ajustes y personajes) para repetirla con un clic.</p>';
 }
 function toggleRecipes(force) {
   const pop = $('#recipesPop');
@@ -667,15 +715,15 @@ function toggleRecipes(force) {
   if (!reduceMotion) pop.animate([{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: EASE });
 }
 $('#recipesBtn').addEventListener('click', (e) => { e.stopPropagation(); toggleRecipes(); });
-document.addEventListener('click', (e) => { if (!$('#recipesPop').hidden && !e.target.closest('#recipesPop, #recipesBtn, #ask')) toggleRecipes(false); });
+document.addEventListener('click', (e) => { if (!$('#recipesPop').hidden && e.target.isConnected && !e.target.closest('#recipesPop, #recipesBtn, #ask')) toggleRecipes(false); });
 $('#recipeSave').addEventListener('click', async () => {
   if (!promptEl.value.trim()) return toast('Escribe una descripción antes de guardarla.', 'error');
   toggleRecipes(false);
-  const name = await ask('Nombre de la receta', { placeholder: 'Ej.: Anuncio de producto vertical' });
+  const name = await ask('Nombre de la plantilla', { placeholder: 'Ej.: Anuncio de producto vertical' });
   if (!name) return;
   try {
-    await post('/api/recipes', { name, data: { prompt: promptEl.value, mode: state.mode, model: state.model, duration: state.duration, ratio: state.ratio, resolution: state.resolution, count: state.count, chars: [...state.selectedChars] } });
-    toast(`Receta «${name}» guardada`);
+    await post('/api/recipes', { name, data: { prompt: promptEl.value, mode: state.mode, model: state.model, duration: state.duration, ratio: state.ratio, resolution: state.resolution, count: state.count, chars: [...state.selectedChars], styleChoice: state.styleChoice, touches: [...state.touches] } });
+    toast(`Plantilla «${name}» guardada`);
   } catch (e) { toast(e.message, 'error'); }
 });
 $('#recipeList').addEventListener('click', async (e) => {
@@ -687,12 +735,15 @@ $('#recipeList').addEventListener('click', async (e) => {
   const d = r.data || {};
   Object.assign(state, { model: d.model || '1.2', duration: d.duration || state.duration, ratio: d.ratio || state.ratio, resolution: d.resolution || state.resolution, count: d.count || '1' });
   state.selectedChars = new Set((d.chars || []).filter((id) => state.characters.some((c) => c.id === id)));
+  if (d.styleChoice) state.styleChoice = d.styleChoice;
+  state.touches = new Set(d.touches || []);
+  renderStyleSelect();
   setPrompt(d.prompt || '');
   syncAll();
   setMode(d.mode || 'text');
   toggleRecipes(false);
   flashComposer();
-  toast(`Receta «${r.name}» cargada`, 'info');
+  toast(`Plantilla «${r.name}» cargada`, 'info');
 });
 
 // ---------- Subidas ----------
@@ -966,8 +1017,9 @@ function collect() {
   const ok = (s) => s && s.url && !s.error;
   const used = [];
   const body = {
-    model: state.model, mode: state.mode, prompt: promptEl.value, duration: state.duration, aspect_ratio: state.ratio,
-    resolution: state.resolution, seed: $('#seed').value, count: state.count, previews: {}, project: state.targetProject,
+    model: state.model, mode: state.mode, prompt: composePrompt(promptEl.value).text, userPrompt: promptEl.value, styleName: activeStyle()?.name, fromId: state.fromId,
+    duration: state.duration, aspect_ratio: state.ratio,
+    resolution: state.resolution, seed: $('#seed').value || (bibleOf()?.seed ?? ''), count: state.count, previews: {}, project: state.targetProject,
     character_ids: state.mode === 'frames' ? [] : [...state.selectedChars].filter((id) => state.characters.some((c) => c.id === id)),
   };
   if (body.character_ids.length) body.previews.chars = state.characters.filter((c) => body.character_ids.includes(c.id)).map((c) => ({ name: c.name, preview: c.preview }));
@@ -1007,7 +1059,7 @@ async function generate() {
   if (!state.hasKey) return openModal($('#keyModal'));
   let body;
   try { body = collect(); } catch (e) { nudge($('#uploadsWrap')); return toast(e.message, 'error'); }
-  if (!body.prompt.trim()) { nudge($('.prompt-box')); promptEl.focus(); return toast('Escribe qué quieres ver en el video.', 'error'); }
+  if (!body.userPrompt.trim()) { nudge($('.prompt-box')); promptEl.focus(); return toast('Escribe qué quieres ver en el video.', 'error'); }
   state.busy = true;
   updateGenerate();
   try {
@@ -1017,6 +1069,7 @@ async function generate() {
     if (state.projectFilter !== '__all' && state.projectFilter !== (body.project || '__none')) setProjectFilter('__all');
     renderGallery();
     updateGenerate(items.length > 1 ? `✓ ${items.length} en la cola` : '✓ En la cola');
+    if (state.fromId) { state.fromId = ''; promptEl.placeholder = PROMPT_PLACEHOLDER; }
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
   } catch (e) {
     toast(e.message, 'error', { ms: 6500 });
@@ -1030,10 +1083,11 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !openModals.length) { e.preventDefault(); generate(); }
   if (e.key === 'Escape') {
     if (!$('#recipesPop').hidden) return toggleRecipes(false);
+    if (!$('#stylePop').hidden) return toggleStylePop(false);
     if (state.selectMode && !openModals.length) return setSelectMode(false);
     const top = openModals[openModals.length - 1];
     if (!top || top.id === 'keyModal') return;
-    if (top.id === 'viewer') closeViewer(); else if (top.id === 'compare') closeCompare(); else closeModal(top);
+    if (top.id === 'viewer') closeViewer(); else if (top.id === 'compare') closeCompare(); else if (top.id === 'editor') window.OFS.closeEditor(); else closeModal(top);
   }
   if (!$('#viewer').hidden && openModals.at(-1)?.id === 'viewer' && !e.target.closest('input, textarea') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) stepViewer(e.key === 'ArrowRight' ? 1 : -1);
 });
@@ -1046,7 +1100,9 @@ function renderProjects() {
   pf.value = state.projectFilter === '__all' || state.projectFilter === '__none' || state.projects.includes(state.projectFilter) ? state.projectFilter : '__all';
   const tp = $('#targetProject');
   tp.innerHTML = `<option value="">Sin proyecto</option>${opts}<option value="__new">+ Nuevo proyecto…</option>`;
-  if (!state.projects.includes(state.targetProject)) state.targetProject = '';
+  // Solo se borra si ya llegó la lista real de proyectos (al cargar todavía está vacía)
+  if (state.projectsLoaded && !state.projects.includes(state.targetProject)) state.targetProject = '';
+  if (state.targetProject && !state.projects.includes(state.targetProject)) tp.insertAdjacentHTML('afterbegin', `<option value="${esc(state.targetProject)}">${esc(state.targetProject)}</option>`);
   tp.value = state.targetProject;
 }
 async function newProject() {
@@ -1057,7 +1113,7 @@ async function newProject() {
 }
 function setProjectFilter(v) {
   state.projectFilter = v;
-  if (v !== '__all' && v !== '__none') { state.targetProject = v; persist(); }
+  if (v !== '__all' && v !== '__none' && v !== state.targetProject) setTargetProject(v);
   renderProjects();
   renderGallery();
 }
@@ -1066,10 +1122,317 @@ $('#projectFilter').addEventListener('change', async (e) => {
   setProjectFilter(e.target.value);
 });
 $('#targetProject').addEventListener('change', async (e) => {
-  if (e.target.value === '__new') { const n = await newProject(); state.targetProject = n || state.targetProject; }
-  else state.targetProject = e.target.value;
-  persist(); renderProjects();
+  if (e.target.value === '__new') { const n = await newProject(); setTargetProject(n || state.targetProject); return; }
+  setTargetProject(e.target.value);
 });
+
+// Cambiar de proyecto aplica su biblia (ajustes, personajes y estilo)
+function setTargetProject(name, { quiet = false } = {}) {
+  const changed = name !== state.targetProject;
+  state.targetProject = name;
+  state.styleChoice = '__auto';
+  const b = bibleOf();
+  if (b && changed) {
+    if (b.defaults) {
+      if (b.defaults.model) state.model = b.defaults.model;
+      if (b.defaults.ratio) state.ratio = b.defaults.ratio;
+      if (b.defaults.resolution) state.resolution = b.defaults.resolution;
+      syncAll();
+    }
+    if (b.chars?.length) state.selectedChars = new Set(b.chars.filter((id) => state.characters.some((c) => c.id === id)).slice(0, mi().maxChar));
+    if (!quiet) toast(`Biblia de «${name}» aplicada`, 'info');
+  }
+  persist();
+  renderProjects();
+  renderBibleBtn();
+  renderStyleSelect();
+  refreshForm();
+  renderFinal();
+}
+
+// ---------- Biblia del proyecto y estilos ----------
+const bibleOf = (p = state.targetProject) => (p ? state.bibles[p] || null : null);
+function activeStyle(choice = state.styleChoice, project = state.targetProject) {
+  if (choice === 'none') return null;
+  const id = choice === '__auto' ? bibleOf(project)?.styleId : choice;
+  return allStyles().find((s) => s.id === id) || null;
+}
+const allStyles = () => [...state.styles, ...BUILTIN_STYLES];
+// El «system prompt»: tu texto + estilo base + estilo guardado + lo que hay que evitar
+function composePrompt(user, { project = state.targetProject, styleChoice = state.styleChoice } = {}) {
+  const b = bibleOf(project);
+  const st = activeStyle(styleChoice, project);
+  const parts = [String(user || '').trim()];
+  const tags = [];
+  const touches = TOUCHES.filter(([id]) => state.touches.has(id));
+  const look = [b?.style, st?.text, touches.map((t) => t[2]).join(', ')].filter(Boolean).map((x) => x.trim().replace(/[.\s]+$/, '')).join('. ');
+  if (look) parts.push(`Estilo visual: ${look}.`);
+  if (b?.avoid) parts.push(`Evitar: ${b.avoid.trim().replace(/[.\s]+$/, '')}.`);
+  if (b?.style) tags.push('Biblia');
+  if (st) tags.push(`Estilo: ${st.name}`);
+  if (touches.length) tags.push(touches.length === 1 ? touches[0][1] : `${touches.length} toques`);
+  if (b?.avoid) tags.push('Evitar');
+  return { text: parts.filter(Boolean).join('\n\n'), tags };
+}
+function renderFinal() {
+  const user = promptEl.value.trim();
+  const { text, tags } = composePrompt(user);
+  const box = $('#finalPreview');
+  const show = !!user && tags.length > 0;
+  box.hidden = !show;
+  if (!show) return;
+  $('#fpTags').innerHTML = tags.map((t) => `<span>${esc(t)}</span>`).join('');
+  $('#finalText').textContent = text;
+}
+function renderBibleBtn() {
+  const b = bibleOf();
+  const active = !!(b && (b.style || b.avoid || b.styleId || b.chars?.length || b.seed || b.defaults));
+  $('#bibleBtn').classList.toggle('active', active);
+  $('#bibleBtn').dataset.tip = !state.targetProject
+    ? 'Elige o crea un proyecto para darle su biblia: estilo, reglas y personajes para todos sus videos'
+    : active ? `La biblia de «${state.targetProject}» se está aplicando. Clic para verla o cambiarla.` : `«${state.targetProject}» aún no tiene biblia. Clic para crearla.`;
+}
+function renderStyleSelect() {
+  if (state.styleChoice !== '__auto' && state.styleChoice !== 'none' && !allStyles().some((s) => s.id === state.styleChoice)) state.styleChoice = '__auto';
+  const st = activeStyle();
+  const nT = TOUCHES.filter(([id]) => state.touches.has(id)).length;
+  const label = st ? st.name : 'Estilo';
+  $('#styleBtnText').textContent = nT ? label + ' + ' + nT : label;
+  $('#styleBtn').classList.toggle('on', !!st || nT > 0);
+  if (!$('#stylePop').hidden) renderStylePop();
+}
+function renderStylePop() {
+  const b = bibleOf();
+  const projStyle = b?.styleId && allStyles().find((s) => s.id === b.styleId);
+  const cur = state.styleChoice;
+  const row = (value, title, sub, thumb) => '<button type="button" class="sp-item ' + (cur === value ? 'on' : '') + '" data-style-pick="' + value + '">'
+    + '<span class="sp-thumb">' + (thumb || ICON.palette) + '</span><span class="sp-txt"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' + (cur === value ? ICON.check : '') + '</button>';
+  const exThumb = (s) => { const ex = state.items.get(s.exampleId); const t = ex && thumbOf(ex); return t ? '<img src="' + t + '" alt="">' : ''; };
+  let html = row('__auto', projStyle ? 'Del proyecto: ' + projStyle.name : 'Sin estilo', projStyle ? 'El que marca la biblia' : 'Solo tu descripción');
+  if (projStyle) html += row('none', 'Ninguno', 'Solo para este video');
+  const mine = state.styles.filter((s) => s.id !== projStyle?.id);
+  if (mine.length) html += '<div class="sp-sec">Tus estilos</div>' + mine.map((s) => row(s.id, s.name, s.text, exThumb(s))).join('');
+  html += '<div class="sp-sec">Rápidos</div>' + BUILTIN_STYLES.filter((s) => s.id !== projStyle?.id).map((s) => row(s.id, s.name, s.help)).join('');
+  html += '<button type="button" class="sp-new" data-style-new>' + ICON.plus + ' Crear mi propio estilo</button>';
+  $('#spList').innerHTML = html;
+  $('#touchChips').innerHTML = TOUCHES.map(([id, name, text]) => '<button type="button" class="chip ' + (state.touches.has(id) ? 'on' : '') + '" data-touch="' + id + '" data-tip="Añade: ' + esc(text) + '">' + esc(name) + '</button>').join('');
+}
+function toggleStylePop(force) {
+  const pop = $('#stylePop');
+  const open = force ?? pop.hidden;
+  if (!open) { pop.hidden = true; $('#styleBtn').setAttribute('aria-expanded', 'false'); return; }
+  renderStylePop();
+  pop.hidden = false;
+  $('#styleBtn').setAttribute('aria-expanded', 'true');
+  const r = $('#styleBtn').getBoundingClientRect();
+  const h = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.left)) + 'px';
+  pop.style.top = (r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+  if (!reduceMotion) pop.animate([{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: EASE });
+}
+$('#styleBtn').addEventListener('click', (e) => { e.stopPropagation(); hideTip(); toggleStylePop(); });
+document.addEventListener('click', (e) => { if (!$('#stylePop').hidden && e.target.isConnected && !e.target.closest('#stylePop, #styleBtn')) toggleStylePop(false); });
+$('#stylePop').addEventListener('click', (e) => {
+  const pick = e.target.closest('[data-style-pick]');
+  const touch = e.target.closest('[data-touch]');
+  if (pick) { state.styleChoice = pick.dataset.stylePick; persist(); renderStyleSelect(); renderStylePop(); renderFinal(); }
+  if (touch) { const id = touch.dataset.touch; if (state.touches.has(id)) state.touches.delete(id); else state.touches.add(id); persist(); renderStyleSelect(); renderStylePop(); renderFinal(); }
+  if (e.target.closest('[data-style-new]')) { toggleStylePop(false); openStyles(); }
+});
+
+// Ventana de la biblia
+const AVOID_SUGGESTIONS = ['texto en pantalla', 'marcas de agua', 'subtítulos', 'logos', 'manos deformes', 'caras borrosas', 'cortes bruscos', 'música'];
+let bibleDraftChars = new Set();
+async function openBible() {
+  if (!state.targetProject) {
+    const n = await newProject();
+    if (!n) return;
+    setTargetProject(n, { quiet: true });
+  }
+  const b = bibleOf() || {};
+  $('#bibleName').textContent = `«${state.targetProject}»`;
+  $('#bibleStyle').value = b.style || '';
+  $('#bibleAvoid').value = b.avoid || '';
+  $('#bibleSeed').value = b.seed ?? '';
+  $('#bibleStyleId').innerHTML = '<option value="">Ninguno</option>'
+    + (state.styles.length ? '<optgroup label="Tus estilos">' + state.styles.map((s) => '<option value="' + s.id + '">' + esc(s.name) + '</option>').join('') + '</optgroup>' : '')
+    + '<optgroup label="Rápidos">' + BUILTIN_STYLES.map((s) => '<option value="' + s.id + '">' + esc(s.name) + '</option>').join('') + '</optgroup>';
+  $('#bibleStyleId').value = b.styleId || '';
+  bibleDraftChars = new Set(b.chars || []);
+  renderBibleChars();
+  $('#bibleDefaults').checked = !!b.defaults;
+  paintDefaultsText();
+  syncAvoidChips();
+  openModal($('#bibleModal'));
+  setTimeout(() => $('#bibleStyle').focus(), 60);
+}
+function paintDefaultsText() {
+  const d = $('#bibleDefaults').checked && bibleOf()?.defaults && !$('#bibleDefaults').dataset.touched ? bibleOf().defaults : { model: state.model, ratio: state.ratio, resolution: state.resolution };
+  $('#bibleDefaultsText').textContent = `(Omni ${d.model} · ${d.ratio === '9:16' ? 'Vertical' : 'Horizontal'} · ${resLabel(d.resolution)})`;
+}
+$('#bibleDefaults').addEventListener('change', (e) => { e.target.dataset.touched = '1'; paintDefaultsText(); });
+function renderBibleChars() {
+  $('#bibleChars').innerHTML = state.characters.length
+    ? state.characters.map((c) => `<button type="button" class="char-chip ${bibleDraftChars.has(c.id) ? 'on' : ''}" data-bchar="${c.id}"><span class="avatar">${c.preview ? `<img src="${c.preview}" alt="">` : esc(c.name[0])}</span><span>${esc(c.name)}</span>${bibleDraftChars.has(c.id) ? ICON.check : ''}</button>`).join('')
+    : '<p class="muted small">Aún no tienes personajes. Créalos con el botón «Personaje» junto a la descripción.</p>';
+}
+$('#bibleChars').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-bchar]');
+  if (!b) return;
+  const id = b.dataset.bchar;
+  if (bibleDraftChars.has(id)) bibleDraftChars.delete(id);
+  else if (bibleDraftChars.size >= 3) return toast('Máximo 3 personajes fijos.', 'info');
+  else bibleDraftChars.add(id);
+  renderBibleChars();
+});
+function syncAvoidChips() {
+  const v = norm($('#bibleAvoid').value);
+  $('#avoidChips').innerHTML = AVOID_SUGGESTIONS.map((t) => `<button type="button" class="chip ${v.includes(norm(t)) ? 'on' : ''}" data-avoid="${esc(t)}">${esc(t)}</button>`).join('');
+}
+$('#bibleAvoid').addEventListener('input', syncAvoidChips);
+$('#avoidChips').addEventListener('click', (e) => {
+  const c = e.target.closest('[data-avoid]');
+  if (!c) return;
+  const t = c.dataset.avoid;
+  const items = $('#bibleAvoid').value.split(',').map((x) => x.trim()).filter(Boolean);
+  const i = items.findIndex((x) => norm(x) === norm(t));
+  if (i >= 0) items.splice(i, 1); else items.push(t);
+  $('#bibleAvoid').value = items.join(', ');
+  syncAvoidChips();
+});
+$('#bibleDice').addEventListener('click', () => ($('#bibleSeed').value = 10000 + Math.floor(Math.random() * 90000)));
+$('#bibleBtn').addEventListener('click', openBible);
+$('#bibleSave').addEventListener('click', async () => {
+  const btn = $('#bibleSave');
+  btn.disabled = true;
+  const prev = bibleOf();
+  const keepDefaults = $('#bibleDefaults').checked;
+  const defaults = !keepDefaults ? null : !$('#bibleDefaults').dataset.touched && prev?.defaults ? prev.defaults : { model: state.model, ratio: state.ratio, resolution: state.resolution };
+  try {
+    const b = await post(`/api/projects/${encodeURIComponent(state.targetProject)}/bible`, {
+      style: $('#bibleStyle').value, avoid: $('#bibleAvoid').value, styleId: $('#bibleStyleId').value,
+      chars: [...bibleDraftChars], seed: $('#bibleSeed').value, defaults,
+    });
+    state.bibles[state.targetProject] = b;
+    if (b.chars.length && state.mode !== 'frames') state.selectedChars = new Set(b.chars.filter((id) => state.characters.some((c) => c.id === id)).slice(0, mi().maxChar));
+    state.styleChoice = '__auto';
+    delete $('#bibleDefaults').dataset.touched;
+    persist(); renderChars(); renderBibleBtn(); renderStyleSelect(); renderFinal();
+    closeModal($('#bibleModal'));
+    toast(`Biblia de «${state.targetProject}» guardada. Se aplicará a cada video nuevo del proyecto.`);
+  } catch (e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; }
+});
+
+// Ventana de estilos
+function openStyles({ exampleId = '', text = '', name = '', id = '' } = {}) {
+  $('#styleId').value = id;
+  $('#styleName').value = name;
+  $('#styleText').value = text;
+  $('#styleText').dataset.example = exampleId;
+  paintStyleExample();
+  renderStyleList();
+  openModal($('#stylesModal'));
+  setTimeout(() => (name ? $('#styleText') : $('#styleName')).focus(), 60);
+}
+function paintStyleExample() {
+  const ex = state.items.get($('#styleText').dataset.example || '');
+  $('#styleExample').textContent = ex ? `Video de ejemplo: «${(ex.userPrompt || ex.prompt).slice(0, 40)}…»` : '';
+}
+function renderStyleList() {
+  $('#styleList').innerHTML = state.styles.length
+    ? state.styles.map((s) => {
+      const ex = state.items.get(s.exampleId);
+      const media = ex?.state === 'done' ? `<video src="${srcOf(ex)}#t=0.5" muted loop playsinline preload="metadata"></video>` : `<span class="st-swatch">${ICON.palette}</span>`;
+      const used = Object.entries(state.bibles).filter(([, b]) => b.styleId === s.id).map(([p]) => p);
+      return `<div class="style-item" data-style="${s.id}">
+        <div class="st-media">${media}</div>
+        <div class="st-body"><b>${esc(s.name)}</b><p>${esc(s.text)}</p>${used.length ? `<span class="muted small">Biblia de: ${used.map(esc).join(', ')}</span>` : ''}</div>
+        <div class="st-actions">
+          <button class="btn sm" data-style-use="${s.id}">Usar</button>
+          <button class="icon-btn" data-style-edit="${s.id}" data-tip="Editar">${ICON.reuse}</button>
+          <button class="icon-btn" data-style-del="${s.id}" data-tip="Borrar">${ICON.trash}</button>
+        </div></div>`;
+    }).join('')
+    : '<p class="muted small" style="padding:8px 2px">Aún no tienes estilos guardados.</p>';
+}
+$('#styleList').addEventListener('mouseover', (e) => e.target.closest('.style-item')?.querySelector('video')?.play().catch(() => {}));
+$('#styleList').addEventListener('mouseout', (e) => { const it = e.target.closest('.style-item'); if (it && !it.contains(e.relatedTarget)) it.querySelector('video')?.pause(); });
+$('#styleList').addEventListener('click', async (e) => {
+  const use = e.target.closest('[data-style-use]'), edit = e.target.closest('[data-style-edit]'), del = e.target.closest('[data-style-del]');
+  if (use) {
+    state.styleChoice = use.dataset.styleUse;
+    if (bibleOf()?.styleId === state.styleChoice) state.styleChoice = '__auto';
+    persist(); renderStyleSelect(); renderFinal();
+    closeModal($('#stylesModal'));
+    toast(`Estilo «${allStyles().find((s) => s.id === use.dataset.styleUse)?.name}» elegido`, 'info');
+  }
+  if (edit) { const s = state.styles.find((x) => x.id === edit.dataset.styleEdit); openStyles({ id: s.id, name: s.name, text: s.text, exampleId: s.exampleId }); }
+  if (del) {
+    if (!del.classList.contains('confirm')) { del.classList.add('confirm'); del.dataset.tip = 'Clic otra vez para borrarlo'; hideTip(); tipTarget = del; showTip(del); setTimeout(() => del.isConnected && del.classList.remove('confirm'), 3000); return; }
+    hideTip();
+    await api(`/api/styles/${del.dataset.styleDel}`, { method: 'DELETE' }).catch((err) => toast(err.message, 'error'));
+  }
+});
+$('#styleReset').addEventListener('click', () => openStyles());
+$('#stylesBtn').addEventListener('click', () => { toggleStylePop(false); openStyles(); });
+$('#styleImprove').addEventListener('click', (e) => {
+  const ta = $('#styleText');
+  const ex = state.items.get(ta.dataset.example || '');
+  if (!ta.value.trim() && ex) ta.value = ex.userPrompt || ex.prompt;
+  improveText(ta, 'style', e.currentTarget);
+});
+$('#styleSave').addEventListener('click', async () => {
+  try {
+    const s = await post('/api/styles', { id: $('#styleId').value, name: $('#styleName').value, text: $('#styleText').value, exampleId: $('#styleText').dataset.example || '' });
+    $('#styleId').value = s.id;
+    toast(`Estilo «${s.name}» guardado`);
+    renderStyleList();
+  } catch (err) { toast(err.message, 'error'); nudge($('#stylesModal .style-form')); }
+});
+
+// ---------- Continuidad: siguiente escena desde el último cuadro ----------
+function lastFrameOf(h) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video');
+    v.muted = true; v.preload = 'auto'; v.playsInline = true;
+    v.src = `/videos/${encodeURIComponent(h.localFile)}`;
+    v.onloadedmetadata = () => { v.currentTime = Math.max(0, v.duration - 0.06); };
+    v.onseeked = () => {
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo leer el último cuadro.'))), 'image/jpeg', 0.93);
+    };
+    v.onerror = () => reject(new Error('No se pudo abrir el video guardado en tu PC.'));
+  });
+}
+async function nextSceneFrom(h) {
+  const btn = $('#vNext');
+  if (btn) { btn.disabled = true; btn.innerHTML = `${ICON.next} Tomando el último cuadro…`; }
+  try {
+    const blob = await lastFrameOf(h);
+    const file = new File([blob], `ultimo-cuadro-${h.id}.jpg`, { type: 'image/jpeg' });
+    closeViewer();
+    if (h.project && h.project !== state.targetProject) setTargetProject(h.project, { quiet: true });
+    [state.first, state.last].forEach((s) => s?.xhr?.abort());
+    state.last = null;
+    state.fromId = h.id;
+    Object.assign(state, { ratio: h.settings.aspect_ratio || state.ratio });
+    if (['1.1', '1.2'].includes(h.model)) state.model = h.model;
+    syncAll();
+    setPrompt('');
+    setMode('frames');
+    await addImageTo('first', file);
+    flashComposer();
+    promptEl.placeholder = 'Describe qué pasa en la siguiente escena. Ej.: la cámara se acerca y ella abre la puerta lentamente.';
+    promptEl.focus({ preventScroll: true });
+    toast('Listo: el último cuadro será el inicio. Describe qué pasa en la siguiente escena.', 'info', { ms: 6500 });
+  } catch (e) {
+    toast(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = `${ICON.next} Siguiente escena desde aquí`; }
+  }
+}
 let searchTimer;
 $('#search').addEventListener('input', (e) => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.search = norm(e.target.value.trim()); renderGallery(); }, 120); });
 
@@ -1114,8 +1477,10 @@ function stageLabel(h) {
   return { waiting: 'En la fila de Kie', queuing: 'En la fila de Kie', generating: h.model === 'upscale' ? 'Mejorando' : 'Generando' }[h.kieState] || 'Enviado';
 }
 function kindBadge(h) {
+  if (h.fromId && !h.kind) return `<span class="kind" data-tip="Empieza donde terminó la escena anterior">${ICON.next} Siguiente escena</span>`;
   if (h.kind === 'extend') return `<span class="kind" data-tip="Continuación de otro video: incluye el original más ${h.addedSeconds} s nuevos">${ICON.extend} Continuación</span>`;
   if (h.kind === 'upscale') return `<span class="kind" data-tip="El mismo video con más calidad">${ICON.hq} Mejorado ${resLabel(h.settings?.resolution)}</span>`;
+  if (h.kind === 'edit') return `<span class="kind" data-tip="Episodio armado en el editor">${ICON.film} Episodio · ${h.clipsCount || ''} clips</span>`;
   if (h.kind === 'remake') return `<span class="kind" data-tip="La misma idea creada otra vez con más calidad">${ICON.hq} Alta calidad</span>`;
   return '';
 }
@@ -1169,7 +1534,7 @@ function cardHTML(h) {
   return `${media}
     <div class="vbody">
       ${kb ? `<div class="kinds">${kb}</div>` : ''}
-      <p class="vprompt">${esc(h.prompt)}</p>
+      <p class="vprompt">${esc(h.userPrompt || h.prompt)}</p>
       <div class="vfoot">${meta}<div class="actions">${actions}</div></div>
     </div>`;
 }
@@ -1182,7 +1547,7 @@ function matchesFilter(h) {
   if (state.filter === 'fav' && !h.favorite) return false;
   if (state.projectFilter === '__none' && h.project) return false;
   if (state.projectFilter !== '__all' && state.projectFilter !== '__none' && h.project !== state.projectFilter) return false;
-  if (state.search && !norm(h.prompt).includes(state.search)) return false;
+  if (state.search && !norm(`${h.userPrompt || ''} ${h.prompt}`).includes(state.search)) return false;
   return true;
 }
 function renderGallery() {
@@ -1351,13 +1716,16 @@ grid.addEventListener('click', async (e) => {
   }
 });
 function reuse(h) {
-  setPrompt(h.prompt);
+  setPrompt(h.userPrompt || h.prompt);
+  const st = state.styles.find((x) => x.name === h.styleName);
+  state.styleChoice = st ? st.id : '__auto';
+  state.fromId = '';
   Object.assign(state, { model: h.model === '1.1' ? '1.1' : '1.2', ratio: h.settings.aspect_ratio, resolution: ['360p', '720p', '1080p', '4k'].includes(h.settings.resolution) ? h.settings.resolution : '720p', count: '1' });
   if (h.mode !== 'video') state.duration = String(h.settings.duration);
   $('#seed').value = h.settings.seed ?? '';
   if (h.inputs?.character_ids?.length) state.selectedChars = new Set(h.inputs.character_ids.filter((id) => state.characters.some((c) => c.id === id)));
   if (h.project) state.targetProject = h.project;
-  syncAll(); persist(); renderProjects();
+  syncAll(); persist(); renderProjects(); renderBibleBtn(); renderStyleSelect(); renderFinal();
   const fresh = Date.now() - (h.uploadedAt || h.createdAt) < UPLOAD_TTL;
   [state.first, state.last, state.video, ...state.images].forEach((s) => s?.xhr?.abort());
   state.images = []; state.first = null; state.last = null; state.video = null;
@@ -1407,11 +1775,13 @@ function openViewer(h) {
       <select id="vProject" data-tip="Mover a un proyecto">${projOpts}</select>
     </div>
     ${kindBadge(h) ? `<div class="kinds">${kindBadge(h)}</div>` : ''}
-    <h3>Descripción</h3>
-    <p class="full-prompt">${esc(h.prompt)}</p>
+    <h3>${h.kind === 'edit' ? 'Nombre' : 'Descripción'}</h3>
+    <p class="full-prompt">${esc(h.userPrompt || h.prompt)}</p>
+    ${h.userPrompt && h.userPrompt !== h.prompt ? `<details class="sent"><summary>Texto enviado (con biblia y estilo)</summary><p>${esc(h.prompt)}</p></details>` : ''}
+    ${h.styleName ? `<p class="muted small">Estilo: <b>${esc(h.styleName)}</b></p>` : ''}
     <h3>Detalles</h3>
     <dl class="kv">
-      <dt>Modelo</dt><dd>${h.model === 'upscale' ? 'Mejora de calidad' : h.model === 'extend' ? 'Omni 1.2 (continuación)' : `Omni ${h.model}`}</dd>
+      <dt>Modelo</dt><dd>${h.model === 'edit' ? `Editor (${h.clipsCount || 0} clips)` : h.model === 'upscale' ? 'Mejora de calidad' : h.model === 'extend' ? 'Omni 1.2 (continuación)' : `Omni ${h.model}`}</dd>
       <dt>Modo</dt><dd>${MODE_NAMES[h.mode] || ''}</dd>
       ${s.duration ? `<dt>Duración</dt><dd>${s.duration} s</dd>` : ''}
       <dt>Calidad</dt><dd>${resLabel(s.resolution)}</dd>
@@ -1469,6 +1839,13 @@ function openViewer(h) {
       </div>
     </details>` : ''}
 
+    <div class="tool-row">
+      ${h.localFile && h.model !== 'upscale' ? `<button class="btn" id="vNext" data-tip="Usa el último cuadro de este video como inicio de la siguiente escena, para que la historia siga sin saltos">${ICON.next} Siguiente escena desde aquí</button>` : ''}
+      ${h.kind === 'edit' ? '' : `<button class="btn" id="vStyle" data-tip="Guarda el estilo de este video para usarlo en otros">${ICON.palette} Guardar su estilo</button>`}
+    </div>
+    ${h.localFile ? (h.kind === 'edit' && h.editId
+      ? `<button class="btn" id="vEditor" data-tip="Vuelve a abrir este episodio en el editor para cambiarlo">${ICON.film} Abrir en el editor</button>`
+      : `<button class="btn" id="vEditor" data-tip="Añade este video al final del episodio que estás armando">${ICON.film} Añadir al editor</button>`) : ''}
     <button class="btn ghost-line" id="vCopy">${ICON.copy} Copiar descripción</button>`;
 
   $('#vFav').onclick = () => { patchItem(h, { favorite: !h.favorite }); openViewer(h); };
@@ -1481,7 +1858,10 @@ function openViewer(h) {
   };
   $('#vReuse')?.addEventListener('click', () => reuse(h));
   $('#vCompare')?.addEventListener('click', () => { closeViewer(); openCompare(sib); });
-  $('#vCopy').onclick = (ev) => navigator.clipboard.writeText(h.prompt).then(() => { ev.currentTarget.innerHTML = `${ICON.check} Copiado`; });
+  $('#vNext')?.addEventListener('click', () => nextSceneFrom(h));
+  $('#vEditor')?.addEventListener('click', () => { closeViewer(); setTimeout(() => window.OFS.openEditor(h.kind === 'edit' ? { editId: h.editId } : { addItemId: h.id }), 220); });
+  if ($('#vStyle')) $('#vStyle').onclick = () => { closeViewer(); openStyles({ exampleId: h.id, text: state.styles.find((x) => x.name === h.styleName)?.text || '' }); };
+  $('#vCopy').onclick = (ev) => navigator.clipboard.writeText(h.userPrompt || h.prompt).then(() => { ev.currentTarget.innerHTML = `${ICON.check} Copiado`; });
   // Continuar
   if (canExtend(h)) {
     let extDur = 5;
@@ -1496,7 +1876,7 @@ function openViewer(h) {
       const prompt = $('#extPrompt').value.trim();
       if (!prompt) { nudge($('#extPrompt')); return toast('Escribe qué pasa a continuación.', 'error'); }
       try {
-        const { item } = await post(`/api/history/${h.id}/extend`, { prompt, duration: extDur });
+        const { item } = await post(`/api/history/${h.id}/extend`, { prompt: composePrompt(prompt, { project: h.project, styleChoice: '__auto' }).text, userPrompt: prompt, duration: extDur });
         upsert(item, { quiet: true }); renderGallery(); closeViewer();
         toast('Continuación en la cola. El video nuevo incluirá el original.', 'info', { ms: 5500 });
       } catch (err) { toast(err.message, 'error', { ms: 6500 }); }
@@ -1548,6 +1928,7 @@ function updateSelectBar() {
   $('#selectGo').textContent = n >= 2 ? `Comparar ${n}` : 'Comparar';
 }
 $('#compareBtn').addEventListener('click', () => setSelectMode(!state.selectMode));
+$('#editorBtn').addEventListener('click', () => { setSelectMode(false); window.OFS.openEditor(); });
 $('#selectCancel').addEventListener('click', () => setSelectMode(false));
 $('#selectGo').addEventListener('click', () => { const list = [...state.selected].map((id) => state.items.get(id)).filter(Boolean); setSelectMode(false); openCompare(list); });
 
@@ -1624,7 +2005,9 @@ function notify(h, title) {
 function applyLists(d) {
   if (d.characters) { state.characters = d.characters; for (const id of [...state.selectedChars]) if (!d.characters.some((c) => c.id === id)) state.selectedChars.delete(id); renderChars(); if (!$('#charModal').hidden) renderCharList(); }
   if (d.recipes) { state.recipes = d.recipes; if (!$('#recipesPop').hidden) renderRecipes(); }
-  if (d.projects) { state.projects = d.projects; renderProjects(); }
+  if (d.projects) { state.projects = d.projects; state.projectsLoaded = true; renderProjects(); renderBibleBtn(); }
+  if (d.bibles) { state.bibles = d.bibles; renderBibleBtn(); renderStyleSelect(); renderFinal(); }
+  if (d.styles) { state.styles = d.styles; renderStyleSelect(); renderFinal(); if (!$('#stylesModal').hidden) renderStyleList(); }
   if (d.spending) { state.spending = d.spending; renderSpending(); }
 }
 async function loadHistory() {
@@ -1652,14 +2035,18 @@ function connect() {
     setLive(true);
     loadHistory().catch(() => {});
   });
-  es.addEventListener('item', (e) => { upsert(JSON.parse(e.data)); scheduleRender(); });
-  es.addEventListener('remove', (e) => { state.items.delete(JSON.parse(e.data).id); scheduleRender(); });
+  es.addEventListener('item', (e) => { upsert(JSON.parse(e.data)); scheduleRender(); window.OFS.onItems?.(); });
+  es.addEventListener('edit', (e) => window.OFS.onEdit?.(JSON.parse(e.data)));
+  es.addEventListener('edit-remove', (e) => window.OFS.onEditRemove?.(JSON.parse(e.data)));
+  es.addEventListener('remove', (e) => { state.items.delete(JSON.parse(e.data).id); scheduleRender(); window.OFS.onItems?.(); });
   es.addEventListener('queue', (e) => { state.queue = JSON.parse(e.data); scheduleRender(); });
   es.addEventListener('credits', (e) => setCredits(JSON.parse(e.data).credits));
   es.addEventListener('spending', (e) => applyLists({ spending: JSON.parse(e.data) }));
   es.addEventListener('characters', (e) => applyLists({ characters: JSON.parse(e.data) }));
   es.addEventListener('recipes', (e) => applyLists({ recipes: JSON.parse(e.data) }));
   es.addEventListener('projects', (e) => applyLists({ projects: JSON.parse(e.data) }));
+  es.addEventListener('bibles', (e) => applyLists({ bibles: JSON.parse(e.data) }));
+  es.addEventListener('styles', (e) => applyLists({ styles: JSON.parse(e.data) }));
   es.onerror = () => setLive(false);
 }
 let offlineToast = null;
@@ -1671,12 +2058,22 @@ function setLive(on) {
   if (on) { clearTimeout(offlineToast); offlineToast = null; }
 }
 
+// ---------- Puente con el editor (editor.js) ----------
+window.OFS = Object.assign(window.OFS || {}, {
+  $, $$, esc, api, post, toast, openModal, closeModal, ask, state, ICON, thumbOf, openViewer, showTip,
+  topModal: () => openModals[openModals.length - 1],
+});
+
 // ---------- Inicio ----------
 restoreSlots();
 autoGrow();
 syncAll();
 renderProjects();
+renderBibleBtn();
+renderStyleSelect();
 setMode(state.mode, { animate: false });
+setSettingsOpen(state.settingsOpen, false);
+renderFinal();
 document.fonts?.ready.then(() => positionIndicator(false));
 requestAnimationFrame(() => document.body.classList.remove('booting'));
 loadConfig().then(updateCost).catch(() => toast('No se pudo hablar con el estudio. ¿Está abierta la ventana negra?', 'error'));
