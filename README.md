@@ -2,38 +2,102 @@
 
 Un estudio sencillo y bonito para crear videos con **Gemini Omni Flash** (modelos 1.2 y 1.1) usando la API de **[Kie.ai](https://kie.ai)**.
 
-Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video** y en 1 a 3 minutos lo tienes listo, guardado en la carpeta `videos/`.
+Funciona en tu computadora: escribes lo que quieres ver, presionas **Crear video** y en 1 a 3 minutos lo tienes listo, guardado en la carpeta `videos/`. Luego puedes unir tus escenas en episodios con el editor.
+
+**¿Primera vez?** Sigue la [Guía de instalación](#guía-de-instalación) paso a paso.
 
 ---
 
-## Cómo empezar (2 minutos)
+## Guía de instalación
 
-0. **Descarga el estudio** (si te lo compartieron por GitHub): en la página del repositorio, botón verde **Code → Download ZIP**, y descomprímelo en una carpeta. *(O con git: `git clone` y la dirección del repositorio.)*
-1. **Instala Node.js** (solo la primera vez): descárgalo en [nodejs.org](https://nodejs.org), versión LTS.
-2. **Abre el estudio**: haz doble clic en **`Iniciar.bat`**. Se abre solo en tu navegador.
-   *(O desde una terminal: `npm start` y entra a http://localhost:4747)*
-3. **Conecta tu cuenta de Kie**: la primera vez te pide tu llave.
-   - Entra a [kie.ai/api-key](https://kie.ai/api-key) y copia tu **API Key**.
-   - Pégala en el estudio y presiona **Conectar**.
-   - Se guarda en el archivo `.env` de esta carpeta, solo en tu computadora.
-4. **Revisa los permisos de tu llave** en kie.ai → API Key. Si tu llave está limitada a ciertos modelos, activa estos (o permite todos):
+Toma unos 10 minutos la primera vez. Después, para usarlo, solo haces doble clic en `Iniciar.bat`.
+
+### Qué necesitas
+
+| | Para qué | ¿Obligatorio? |
+|---|---|---|
+| Una computadora con **Windows 10 u 11** (también funciona en Mac y Linux) | Donde corre el estudio | Sí |
+| **Node.js** (gratis) | El programa que hace funcionar el estudio | Sí |
+| Una cuenta en **[Kie.ai](https://kie.ai)** con créditos | Es quien crea los videos | Sí |
+| **FFmpeg** (gratis) | Para exportar episodios en el editor | Solo si usas el editor |
+
+### Paso 1 · Descarga el estudio
+
+1. En la página del repositorio en GitHub, toca el botón verde **Code** y luego **Download ZIP**.
+2. Busca el archivo en tu carpeta **Descargas**, haz clic derecho → **Extraer todo…** y elige una carpeta fácil de encontrar, por ejemplo `Documentos\omniflash-studio`.
+3. Entra a la carpeta extraída: debes ver los archivos `Iniciar.bat`, `server.js` y la carpeta `public`.
+   > Si ves otra carpeta adentro con el mismo nombre, entra a esa.
+
+*(Si sabes usar git: `git clone https://github.com/Niyr-coder/omniflash-studio.git`.)*
+
+### Paso 2 · Instala Node.js
+
+1. Entra a [nodejs.org](https://nodejs.org) y descarga la versión **LTS** (el botón recomendado).
+2. Abre el instalador y presiona **Siguiente** en todo, sin cambiar nada.
+3. Para comprobarlo: abre **PowerShell** (búscalo en el menú Inicio), escribe `node -v` y presiona Enter. Si aparece un número como `v24.x.x`, está listo.
+
+### Paso 3 · Crea tu cuenta de Kie y tu llave
+
+1. Regístrate en [kie.ai](https://kie.ai) y recarga créditos (1 crédito = $0.005 USD; un video de prueba de 4 s en 360p cuesta 16 créditos, unos /usr/bin/bash.08).
+2. Entra a [kie.ai/api-key](https://kie.ai/api-key) y copia tu **API Key** (es como una contraseña: no la compartas con nadie).
+3. En esa misma página revisa los **permisos de la llave**. Lo más fácil es permitir todos los modelos. Si prefieres elegir, activa:
    - Gemini Omni Flash 1.2 y 1.1 (crear videos)
    - Gemini Omni Flash 1.2 Extend (continuar videos)
    - Video Upscale (mejorar calidad)
    - Gemini Omni Character y Audio (personajes y voces)
    - Gemini 3.8 Flash (para «Mejorar con IA»)
 
-   Si falta un permiso, el estudio te dice exactamente cuál activar.
+   Si falta alguno, el estudio te dice exactamente cuál activar.
 
-5. **Opcional, para el editor: instala FFmpeg** (gratis). Sirve para exportar tus episodios. Abre **PowerShell**, pega esto y presiona Enter:
-   ```
-   winget install Gyan.FFmpeg
-   ```
-   Después cierra la ventana negra y abre `Iniciar.bat` otra vez. *(En Mac: `brew install ffmpeg`.)*
+### Paso 4 · Abre el estudio
 
-Listo. Deja abierta la ventana negra mientras uses el estudio (para cerrarlo: `Ctrl + C` o cierra la ventana).
+1. En la carpeta del estudio, haz doble clic en **`Iniciar.bat`**.
+   - Si Windows muestra **«Windows protegió su PC»**, toca **Más información → Ejecutar de todas formas** (pasa con archivos descargados de internet).
+   - Si Windows pregunta por el **acceso a la red**, elige **Redes privadas** y **Permitir**.
+2. Se abre una **ventana negra** y, sola, tu navegador con el estudio. Si no se abre, entra a **http://localhost:4747**.
+3. **Deja abierta la ventana negra** mientras uses el estudio. Para cerrarlo, cierra esa ventana.
 
-Cada persona usa **su propia llave de Kie** y gasta sus propios créditos. Tus videos, proyectos y llave nunca se suben al repositorio.
+*(En Mac o Linux: abre una terminal en la carpeta y escribe `npm start`.)*
+
+### Paso 5 · Conecta tu llave
+
+La primera vez el estudio te pide tu llave: pégala y presiona **Conectar**. Se guarda en el archivo `.env` dentro de la carpeta, solo en tu computadora. Arriba a la derecha verás tus créditos.
+
+Para probar barato: escribe una idea corta, abre los ajustes, elige **360p** y **4 s**, y presiona **Crear video**.
+
+### Paso 6 (opcional) · Instala FFmpeg para el editor
+
+Sirve para exportar los episodios que armes en el editor. Abre **PowerShell**, pega esto y presiona Enter:
+
+```
+winget install Gyan.FFmpeg
+```
+
+Cuando termine, cierra la ventana negra y abre `Iniciar.bat` otra vez. *(En Mac: `brew install ffmpeg`.)*
+
+### Actualizar a una versión nueva
+
+1. Descarga el ZIP nuevo y extráelo en otra carpeta.
+2. Copia desde tu carpeta vieja a la nueva: el archivo **`.env`** (tu llave) y las carpetas **`data`** (proyectos, personajes, episodios) y **`videos`** (tus videos).
+3. Abre `Iniciar.bat` de la carpeta nueva.
+
+*(Con git: `git pull` y listo; tus datos no se tocan.)*
+
+### Si algo no funciona
+
+| Lo que ves | Qué hacer |
+|---|---|
+| «Necesitas Node.js…» al abrir `Iniciar.bat` | Instala Node.js (paso 2) y vuelve a abrirlo. Si ya lo instalaste, reinicia la computadora. |
+| «El puerto 4747 ya está en uso» | El estudio ya está abierto en otra ventana negra: usa esa, o entra a http://localhost:4747. |
+| La ventana negra se abre y se cierra sola | Abre PowerShell en la carpeta (clic derecho en un espacio vacío → *Abrir en Terminal*), escribe `node server.js` y lee el mensaje. |
+| «Esa llave no parece válida» o «Kie no autorizó la solicitud» | Vuelve a copiarla de kie.ai/api-key, sin espacios. Puedes cambiarla en **Tu cuenta**. |
+| «Tu llave no tiene permiso para…» | Activa ese modelo en kie.ai → API Key (paso 3). |
+| «No te quedan créditos suficientes en Kie» | Recarga créditos en kie.ai. |
+| El editor dice «Para exportar falta FFmpeg» | Instálalo (paso 6) y reinicia el estudio. |
+
+En la ventana negra aparecen los mensajes exactos de Kie (líneas `[Kie]`), útiles si necesitas pedir ayuda.
+
+**Privacidad:** cada persona usa **su propia llave** y gasta sus propios créditos. Tu llave, tus videos y tus proyectos se quedan en tu computadora y nunca se suben a GitHub.
 
 ---
 
